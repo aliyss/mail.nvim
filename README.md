@@ -135,7 +135,7 @@ If `himalaya` is not configured, the plugin will automatically prompt you with a
 
 All commands related to configuring mail.nvim and himalaya.
 
-| MailConfig Commands <div style="width: 360px"></div>           | Status | Description | Flags |
+| MailConfig Commands                                            | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailConfig`                            | ❌ | Open the Mail Configuration Wizard                | |
 | `:MailConfigFile`                        | ❌ | Open the Mail Configuration File                  | |
@@ -152,7 +152,7 @@ All commands related to configuring mail.nvim and himalaya.
 
 All commands related to getting help about mail.nvim. As well as information about the project, contributing, support, etc.
 
-| MailHelp Commands <div style="width: 360px"></div>             | Status | Description | Flags |
+| MailHelp Commands                                              | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailHelp`                              | ❌ | help                                              | |
 | `:MailKeybindings`                       | ❌ | keybindings                                       | |
@@ -169,7 +169,7 @@ All commands related to getting help about mail.nvim. As well as information abo
 
 All commands related to the Mail UI, views and components.
 
-| MailUI Commands <div style="width: 360px"></div>               | Status | Description | Flags |
+| MailUI Commands                                                | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailUI`                                | ❌ | Open the MailUI                                   | view?:dv |
 | `:MailUIToggle`                          | ❌ | Toggle the MailUI                                 | (tags?, components?)?:cv |
@@ -177,7 +177,7 @@ All commands related to the Mail UI, views and components.
 | `:MailUIClose`                           | ❌ | Close the MailUI                                  | |
 
 
-| MailUIView Commands <div style="width: 360px"></div>           | Status | Description | Flags |
+| MailUIView Commands                                            | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailUIViewConfigFile`                  | ❌ | Open the view config file                         | view?:cv|
 | `:MailUIViewList`                        | ❌ | List all saved views                              | |
@@ -188,7 +188,7 @@ All commands related to the Mail UI, views and components.
 | `:MailUIViewDefaultClear`                | ❌ | Reset the default view to the built-in one        | |
 
 
-| MailUIViewComponent Commands <div style="width: 360px"></div>  | Status | Description | Flags |
+| MailUIViewComponent Commands                                   | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailUIViewComponentConfigFile`         | ❌ | Open the view config file to related line number  | component?:cc |
 | `:MailUIViewComponentList`               | ❌ | List all components in a view                     | |
@@ -204,7 +204,7 @@ All commands related to the Mail UI, views and components.
 
 All commands related to managing mail accounts, folders, emails, threads, templates and tags.
 
-| MailAccount Commands <div style="width: 360px"></div>          | Status | Description | Flags |
+| MailAccount Commands                                           | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailAccount`                           | ❌ | Show the details to the mail account              | account?:cda |
 | `:MailAccountList`                       | ❌ | List all configured mail accounts                 | |
@@ -214,7 +214,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailAccountDefaultSet`                 | ❌ | Set the default mail account                      | account?:ca! |
 
 
-| MailFolder Commands <div style="width: 360px"></div>           | Status | Description | Flags (+account?:cda) |
+| MailFolder Commands                                            | Status | Description | Flags (+account?:cda) |
 |---|:---:|---|---|
 | `:MailFolder`                            | ❌ | Show the details to the mail folder               | folder?:cf |
 | `:MailFolderList`                        | ❌ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
@@ -229,7 +229,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailFolderDefaultTrashReset`           | ❌ | Reset the default trash folder                    | folder?! |
 
 
-| MailEmail Commands <div style="width: 360px"></div>            | Status | Description | Flags (+account?:cda, +folder?:cdf)          |
+| MailEmail Commands                                             | Status | Description | Flags (+account?:cda, +folder?:cdf)          |
 |---|:---:|---|---|
 | `:MailEmail`                             | ❌ | Show the details to an email                      | email?:ce, mark_read?:t |
 | `:MailEmailList`                         | ❌ | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
@@ -253,7 +253,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailEmailDelete`                       | ❌ | Delete emails                                     | email[]?:ce!! |
 
 
-| MailEmailThread Commands <div style="width: 360px"></div>      | Status | Description | Flags (+account?:cda, +folder?:cdf, +email?:ce) |
+| MailEmailThread Commands                                       | Status | Description | Flags (+account?:cda, +folder?:cdf, +email?:ce) |
 |---|:---:|---|---|
 | `:MailEmailThread`                       | ❌ | Show the details to a thread                      | thread?:cet, mark_read?:t |
 | `:MailEmailThreadList`                   | ❌ | List threads of an email                          | pagination?:t=>(page?:0, limit?:bh)=>limit? |
@@ -266,7 +266,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailEmailThreadAttachmentsDownload`    | ❌ | Download attachments of emails in the thread      | thread?:cet, dir?:nmd |
 
 
-| MailTemplate Commands <div style="width: 360px"></div>         | Status | Description | Flags (+account?:cda) |
+| MailTemplate Commands                                          | Status | Description | Flags (+account?:cda) |
 |---|:---:|---|---|
 | `:MailTemplate`                          | ❌ | Show the details to a mail template               | template?:cdt |
 | `:MailTemplateList`                      | ❌ | List all mail templates                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
@@ -278,7 +278,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailTemplateTypeSet`                   | ❌ | Set the tag of the mail template                  | template?:ct, type:(create/reply/forward) |
 
 
-| MailTag Commands <div style="width: 360px"></div>              | Status | Description | Flags (+account?:cda) |
+| MailTag Commands                                               | Status | Description | Flags (+account?:cda) |
 |---|:---:|---|---|
 | `:MailEmailFlag`                         | ❌ | Show the details to a mail flag                   | flag?:cf |
 | `:MailEmailFlagList`                     | ❌ | List all mail tags                                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
