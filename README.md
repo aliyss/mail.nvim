@@ -78,6 +78,14 @@ If `himalaya` is not configured, the plugin will automatically prompt you with a
 - `tag`: a tag identifier
 - `account`: a mail account identifier
 - `folder`: a mail folder identifier
+- `email`: an email identifier
+- `thread`: an email thread identifier
+- `template`: a mail template identifier
+- `flag`: a mail flag identifier
+- `command`: a shell command (shell escaped)
+- `format`: a format identifier (plain, json, html, eml, etc.)
+- `pagination`: pagination options (if pagination is disabled, all results are returned according to the limit set)
+- `storage`: storage options (himalaya folder or local directory)
 
 **Operators:**
 - `+`: apply to all within the context
@@ -123,160 +131,161 @@ If `himalaya` is not configured, the plugin will automatically prompt you with a
 - `st`: saved template
 - `cdt`: current else default template
 
+### Mail Config                     
 
-### Mail Config
+All commands related to configuring mail.nvim and himalaya.
 
-| MailConfig Commands                   | Description                                       | Flags                                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailConfig`                         | Open the Mail Configuration Wizard                | |
-| `:MailConfigFile`                     | Open the Mail Configuration File                  | |
-| `:MailConfigLocation`                 | Set the location of the Mail Configuration        | dir |
-| `:MailConfigHimalayaFile`             | Open the Himalaya Configuration File              | |
-| `:MailConfigHimalayaFileLocationSet`  | Set the location of the Himalaya Configuration    | dir |
-| `:MailConfigHimalayaFileLocationReset`| Set the location of the Himalaya Configuration    | |
-| `:MailConfigEmailViewAsCommandSet`    | Set the command to view email when it has a type  | type:(plain,html,...), command, capture_output?:t |
-| `:MailConfigUserHandHoldingSwitchOn`  | Risky actions require confirmation                | |
+| MailConfig Commands <div style="width: 360px"></div>           | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailConfig`                            | ❌ | Open the Mail Configuration Wizard                | |
+| `:MailConfigFile`                        | ❌ | Open the Mail Configuration File                  | |
+| `:MailConfigLocation`                    | ❌ | Set the location of the Mail Configuration        | dir |
+| `:MailConfigHimalayaFile`                | ❌ | Open the Himalaya Configuration File              | |
+| `:MailConfigHimalayaFileLocationSet`     | ❌ | Set the location of the Himalaya Configuration    | dir |
+| `:MailConfigHimalayaFileLocationReset`   | ❌ | Set the location of the Himalaya Configuration    | |
+| `:MailConfigEmailViewAsCommandSet`       | ❌ | Set the command to view email with a format       | format:(plain,html,...), command, capture_output?:t |
+| `:MailConfigUserHandHoldingSwitchOn`     | ❌ | Risky actions require confirmation                | t/f |
+| `:MailConfigUserHandHandHoldingSwitchOn` | ❌ | Risky Risky actions require confirmation          | t/f |
 
 
 ### Mail Help
 
-| MailHelp Commands                     | Description                                       | Flags                                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailHelp`                           | help                                              | |
-| `:MailKeybindings`                    | keybindings                                       | |
-| `:MailAbout`                          | about information                                 | |
-| `:MailChangelog`                      | changelog                                         | |
-| `:MailLicense`                        | license                                           | |
-| `:MailContribute`                     | contribute information                            | |
-| `:MailSupport`                        | support information                               | |
-| `:MailReportIssue`                    | Open the mail.nvim issue tracker                  | |
-| `:MailRequestFeature`                 | Open the mail.nvim feature request tracker        | |
+All commands related to getting help about mail.nvim. As well as information about the project, contributing, support, etc.
+
+| MailHelp Commands <div style="width: 360px"></div>             | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailHelp`                              | ❌ | help                                              | |
+| `:MailKeybindings`                       | ❌ | keybindings                                       | |
+| `:MailAbout`                             | ❌ | about information                                 | |
+| `:MailChangelog`                         | ❌ | changelog                                         | |
+| `:MailLicense`                           | ❌ | license                                           | |
+| `:MailContribute`                        | ❌ | contribute information                            | |
+| `:MailSupport`                           | ❌ | support information                               | |
+| `:MailReportIssue`                       | ❌ | Open the mail.nvim issue tracker                  | |
+| `:MailRequestFeature`                    | ❌ | Open the mail.nvim feature request tracker        | |
 
 
 ### Mail UI
 
-| MailUI Commands                       | Description                                       | Flags                                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailUI`                             | Open the MailUI                                   | view?:dv |
-| `:MailUIToggle`                       | Toggle the MailUI                                 | (tags?, components?)?:cv |
-| `:MailUIRefresh`                      | Refresh the component contents                    | (tags?, components?)?:cc |
-| `:MailUIClose`                        | Close the MailUI                                  | |
+All commands related to the Mail UI, views and components.
+
+| MailUI Commands <div style="width: 360px"></div>               | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailUI`                                | ❌ | Open the MailUI                                   | view?:dv |
+| `:MailUIToggle`                          | ❌ | Toggle the MailUI                                 | (tags?, components?)?:cv |
+| `:MailUIRefresh`                         | ❌ | Refresh the component contents                    | (tags?, components?)?:cc |
+| `:MailUIClose`                           | ❌ | Close the MailUI                                  | |
 
 
-
-| MailUIView Commands                   | Description                                       | Flags                                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailUIViewConfigFile`               | Open the view config file                         | view?:cv|
-| `:MailUIViewList`                     | List all saved views                              | |
-| `:MailUIViewSave`                     | Save the current view                             | tbd (open buffer positions, names...) |
-| `:MailUIViewReset`                    | Reset the current view in case layout changed     | |
-| `:MailUIViewDelete`                   | Delete a saved view                               | view?:cv!! |
-| `:MailUIViewDefaultSet`               | Set the default view                              | view?:cv! |
-| `:MailUIViewDefaultClear`             | Reset the default view to the built-in one        | |
-
+| MailUIView Commands <div style="width: 360px"></div>           | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailUIViewConfigFile`                  | ❌ | Open the view config file                         | view?:cv|
+| `:MailUIViewList`                        | ❌ | List all saved views                              | |
+| `:MailUIViewSave`                        | ❌ | Save the current view                             | tbd (open buffer positions, names...) |
+| `:MailUIViewReset`                       | ❌ | Reset the current view in case layout changed     | |
+| `:MailUIViewDelete`                      | ❌ | Delete a saved view                               | view?:cv!! |
+| `:MailUIViewDefaultSet`                  | ❌ | Set the default view                              | view?:cv! |
+| `:MailUIViewDefaultClear`                | ❌ | Reset the default view to the built-in one        | |
 
 
-| MailUIViewComponent Commands          | Description                                       | Flags (+view?:cv)                                 |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailUIViewComponentConfigFile`      | Open the view config file to related line number  | component?:cc |
-| `:MailUIViewComponentList`            | List all components in a view                     | |
-| `:MailUIViewComponentToggle`          | Toggle a component in a view                      | component?:cc |
-| `:MailUIViewComponentTypeSet`         | Set the type of a component in a view             | component?:sc, type:(list/drawer/email/etc.) |
-| `:MailUIViewComponentFeatureSet`      | Set the feature of a component in a view          | component?:sc, feature:(...) |
-| `:MailUIViewComponentTagAdd`          | Add a tag to a component in a view                | component?:cc, tag |
-| `:MailUIViewComponentTagRemove`       | Remove the tag of a component in a view           | component?:cc, tag |
-| `:MailUIViewComponentTagClear`        | Clear all tags of a component in a view           | component?:cc |
+| MailUIViewComponent Commands <div style="width: 360px"></div>  | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailUIViewComponentConfigFile`         | ❌ | Open the view config file to related line number  | component?:cc |
+| `:MailUIViewComponentList`               | ❌ | List all components in a view                     | |
+| `:MailUIViewComponentToggle`             | ❌ | Toggle a component in a view                      | component?:cc |
+| `:MailUIViewComponentTypeSet`            | ❌ | Set the type of a component in a view             | component?:sc, view_type:(list/drawer/email/etc.) |
+| `:MailUIViewComponentFeatureSet`         | ❌ | Set the feature of a component in a view          | component?:sc, feature:(...) |
+| `:MailUIViewComponentTagAdd`             | ❌ | Add a tag to a component in a view                | component?:cc, tag |
+| `:MailUIViewComponentTagRemove`          | ❌ | Remove the tag of a component in a view           | component?:cc, tag |
+| `:MailUIViewComponentTagClear`           | ❌ | Clear all tags of a component in a view           | component?:cc |
 
 
 ### Mail Management
 
-| MailAccount Commands                  | Description                                       | Flags                                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailAccount`                        | Show the details to the mail account              | account?:cda |
-| `:MailAccountList`                    | List all configured mail accounts                 | |
-| `:MailAccountAdd`                     | Add a mail account                                | tbd (defined by himalaya) |
-| `:MailAccountEdit`                    | Edit a mail account                               | account?:cda |
-| `:MailAccountRemove`                  | Remove a mail account                             | account?:ca!! |
-| `:MailAccountDefaultSet`              | Set the default mail account                      | account?:ca! |
+All commands related to managing mail accounts, folders, emails, threads, templates and tags.
+
+| MailAccount Commands <div style="width: 360px"></div>          | Status | Description | Flags |
+|---|:---:|---|---|
+| `:MailAccount`                           | ❌ | Show the details to the mail account              | account?:cda |
+| `:MailAccountList`                       | ❌ | List all configured mail accounts                 | |
+| `:MailAccountAdd`                        | ❌ | Add a mail account                                | tbd (defined by himalaya) |
+| `:MailAccountEdit`                       | ❌ | Edit a mail account                               | account?:cda |
+| `:MailAccountRemove`                     | ❌ | Remove a mail account                             | account?:ca!! |
+| `:MailAccountDefaultSet`                 | ❌ | Set the default mail account                      | account?:ca! |
 
 
-
-| MailFolder Commands                   | Description                                       | Flags (+account?:cda)                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailFolder`                         | Show the details to the mail folder               | folder?:cf |
-| `:MailFolderList`                     | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailFolderCreate`                   | Create a mail folder                              | tbd (defined by himalaya) |
-| `:MailFolderRename`                   | Rename a mail folder                              | folder?:cf |
-| `:MailFolderDelete`                   | Delete a mail folder                              | folder?:cf!! |
-| `:MailFolderDefaultInboxSet`          | Set the default inbox folder                      | folder?:cf!|
-| `:MailFolderDefaultInboxReset`        | Reset the default inbox folder                    | folder?:cf! |
-| `:MailFolderDefaultDraftSet`          | Set the default draft folder                      | folder?:cf! |
-| `:MailFolderDefaultDraftReset`        | Reset the default draft folder                    | folder?:cf! |
-| `:MailFolderDefaultTrashSet`          | Set the default trash folder                      | folder?:cf! |
-| `:MailFolderDefaultTrashReset`        | Reset the default trash folder                    | folder?! |
-
+| MailFolder Commands <div style="width: 360px"></div>           | Status | Description | Flags (+account?:cda) |
+|---|:---:|---|---|
+| `:MailFolder`                            | ❌ | Show the details to the mail folder               | folder?:cf |
+| `:MailFolderList`                        | ❌ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailFolderCreate`                      | ❌ | Create a mail folder                              | tbd (defined by himalaya) |
+| `:MailFolderRename`                      | ❌ | Rename a mail folder                              | folder?:cf |
+| `:MailFolderDelete`                      | ❌ | Delete a mail folder                              | folder?:cf!! |
+| `:MailFolderDefaultInboxSet`             | ❌ | Set the default inbox folder                      | folder?:cf!|
+| `:MailFolderDefaultInboxReset`           | ❌ | Reset the default inbox folder                    | folder?:cf! |
+| `:MailFolderDefaultDraftSet`             | ❌ | Set the default draft folder                      | folder?:cf! |
+| `:MailFolderDefaultDraftReset`           | ❌ | Reset the default draft folder                    | folder?:cf! |
+| `:MailFolderDefaultTrashSet`             | ❌ | Set the default trash folder                      | folder?:cf! |
+| `:MailFolderDefaultTrashReset`           | ❌ | Reset the default trash folder                    | folder?! |
 
 
-| MailEmail Commands                    | Description                                       | Flags (+account?:cda, +folder?:cdf)               |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailEmail`                          | Show the details to an email                      | email?:ce, mark_read?:t |
-| `:MailEmailList`                      | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailEmailCreate`                    | Create a new email                                | tbd (defined by himalaya) |
-| `:MailEmailSend`                      | Send an email                                     | email?:ce! |
-| `:MailEmailReply`                     | Reply to an email                                 | email?:ce |
-| `:MailEmailReplyAll`                  | Reply All to an email                             | email?:ce |
-| `:MailEmailForward`                   | Forward an email                                  | email?:ce |
-| `:MailEmailDiscard`                   | Discard an email                                  | email?:ce! |
-| `:MailEmailExport`                    | Export an email                                   | email?:ce, dir?:nmd, format?:(plain/json/etc.) |
-| `:MailEmailViewAs`                    | View an email                                     | email?:ce, format?:(...), mark_read?:f |
-| `:MailEmailSaveAsDraft`               | Save an email as draft                            | email?:ce, storage?:(folder?:ddf/dir?:nmd) |
-| `:MailEmailSaveAsTemplate`            | Save an email as template                         | email?:ce |
-| `:MailEmailFlagAdd`                   | Add a flag to an email                            | email?:ce, flag |
-| `:MailEmailFlagRemove`                | Remove a flag from an email                       | email?:ce, flag |
-| `:MailEmailFlagClear`                 | Clear all flags from an email                     | email?:ce! |
-| `:MailEmailToggleRead`                | Mark emails as read                               | email[]?:ce, mark_read?:(null/t/f) |
-| `:MailEmailMove`                      | Move emails to another folder                     | email[]?:ce, to_folder?:folder! |
-| `:MailEmailCopy`                      | Copy emails to another folder                     | email[]?:ce, to_folder?:folder! |
-| `:MailEmailAttachmentsDownload`       | Download attachments of emails                    | email[]?:ce, dir?:nmd |
-| `:MailEmailDelete`                    | Delete emails                                     | email[]?:ce!! |
+| MailEmail Commands <div style="width: 360px"></div>            | Status | Description | Flags (+account?:cda, +folder?:cdf)          |
+|---|:---:|---|---|
+| `:MailEmail`                             | ❌ | Show the details to an email                      | email?:ce, mark_read?:t |
+| `:MailEmailList`                         | ❌ | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailEmailCreate`                       | ❌ | Create a new email                                | tbd (defined by himalaya) |
+| `:MailEmailSend`                         | ❌ | Send an email                                     | email?:ce! |
+| `:MailEmailReply`                        | ❌ | Reply to an email                                 | email?:ce |
+| `:MailEmailReplyAll`                     | ❌ | Reply All to an email                             | email?:ce |
+| `:MailEmailForward`                      | ❌ | Forward an email                                  | email?:ce |
+| `:MailEmailDiscard`                      | ❌ | Discard an email                                  | email?:ce! |
+| `:MailEmailExport`                       | ❌ | Export an email                                   | email?:ce, dir?:nmd, format?:plain |
+| `:MailEmailViewAs`                       | ❌ | View an email                                     | email?:ce, format?:plain, mark_read?:f |
+| `:MailEmailSaveAsDraft`                  | ❌ | Save an email as draft                            | email?:ce, storage?:(folder?:ddf/dir?:nmd) |
+| `:MailEmailSaveAsTemplate`               | ❌ | Save an email as template                         | email?:ce |
+| `:MailEmailFlagAdd`                      | ❌ | Add a flag to an email                            | email?:ce, flag |
+| `:MailEmailFlagRemove`                   | ❌ | Remove a flag from an email                       | email?:ce, flag |
+| `:MailEmailFlagClear`                    | ❌ | Clear all flags from an email                     | email?:ce! |
+| `:MailEmailToggleRead`                   | ❌ | Mark emails as read                               | email[]?:ce, mark_read?:(null/t/f) |
+| `:MailEmailMove`                         | ❌ | Move emails to another folder                     | email[]?:ce, to_folder?:folder! |
+| `:MailEmailCopy`                         | ❌ | Copy emails to another folder                     | email[]?:ce, to_folder?:folder! |
+| `:MailEmailAttachmentsDownload`          | ❌ | Download attachments of emails                    | email[]?:ce, dir?:nmd |
+| `:MailEmailDelete`                       | ❌ | Delete emails                                     | email[]?:ce!! |
 
 
-
-| MailEmailThread Commands              | Description                                       | Flags (+account?:cda, +folder?:cdf, +email?:ce)   |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailEmailThread`                    | Show the details to a thread                      | thread?:cet, mark_read?:t |
-| `:MailEmailThreadList`                | List threads of an email                          | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailEmailThreadNext`                | Go to the next email in the thread                | thread?:cet |
-| `:MailEmailThreadPrevious`            | Go to the previous email in the thread            | thread?:cet |
-| `:MailEmailThreadExport`              | Export emails in the thread                       | thread?:cet, dir?:nmd, format?:(plain/json/etc.) |
-| `:MailEmailThreadMarkRead`            | Mark emails in the thread as read                 | thread?:cet, ignore_emails[]? |
-| `:MailEmailThreadMove`                | Move emails in the thread to another folder       | thread?:cet, to_folder?:folder |
-| `:MailEmailThreadCopy`                | Copy emails in the thread to another folder       | thread?:cet, to_folder?:folder |
-| `:MailEmailThreadAttachmentsDownload` | Download attachments of emails in the thread      | thread?:cet, dir?:nmd |
-
+| MailEmailThread Commands <div style="width: 360px"></div>      | Status | Description | Flags (+account?:cda, +folder?:cdf, +email?:ce) |
+|---|:---:|---|---|
+| `:MailEmailThread`                       | ❌ | Show the details to a thread                      | thread?:cet, mark_read?:t |
+| `:MailEmailThreadList`                   | ❌ | List threads of an email                          | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailEmailThreadNext`                   | ❌ | Go to the next email in the thread                | thread?:cet |
+| `:MailEmailThreadPrevious`               | ❌ | Go to the previous email in the thread            | thread?:cet |
+| `:MailEmailThreadExport`                 | ❌ | Export emails in the thread                       | thread?:cet, dir?:nmd, format?:plain |
+| `:MailEmailThreadMarkRead`               | ❌ | Mark emails in the thread as read                 | thread?:cet, ignore_emails[]? |
+| `:MailEmailThreadMove`                   | ❌ | Move emails in the thread to another folder       | thread?:cet, to_folder?:folder |
+| `:MailEmailThreadCopy`                   | ❌ | Copy emails in the thread to another folder       | thread?:cet, to_folder?:folder |
+| `:MailEmailThreadAttachmentsDownload`    | ❌ | Download attachments of emails in the thread      | thread?:cet, dir?:nmd |
 
 
-| MailTemplate Commands                 | Description                                       | Flags (+account?:cda)                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailTemplate`                       | Show the details to a mail template               | template?:cdt |
-| `:MailTemplateList`                   | List all mail templates                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailTemplateCreate`                 | Create a mail template                            | email?:ce?, tbd (defined by mail.nvim) |
-| `:MailTemplateEdit`                   | Edit a mail template                              | template?:cdt
-| `:MailTemplateSave`                   | Save a mail template                              | template?:ct, overwrite?:f |
-| `:MailTemplateDelete`                 | Delete a mail template                            | template?:ct! |
-| `:MailTemplateDefaultSet`             | Set the default mail template                     | template?:cst! |
-| `:MailTemplateTypeSet`                | Set the tag of the mail template                  | template?:ct, type:(create/reply/forward) |
+| MailTemplate Commands <div style="width: 360px"></div>         | Status | Description | Flags (+account?:cda) |
+|---|:---:|---|---|
+| `:MailTemplate`                          | ❌ | Show the details to a mail template               | template?:cdt |
+| `:MailTemplateList`                      | ❌ | List all mail templates                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailTemplateCreate`                    | ❌ | Create a mail template                            | email?:ce?, tbd (defined by mail.nvim) |
+| `:MailTemplateEdit`                      | ❌ | Edit a mail template                              | template?:cdt
+| `:MailTemplateSave`                      | ❌ | Save a mail template                              | template?:ct, overwrite?:f |
+| `:MailTemplateDelete`                    | ❌ | Delete a mail template                            | template?:ct! |
+| `:MailTemplateDefaultSet`                | ❌ | Set the default mail template                     | template?:cst! |
+| `:MailTemplateTypeSet`                   | ❌ | Set the tag of the mail template                  | template?:ct, type:(create/reply/forward) |
 
 
-
-| MailTag Commands                      | Description                                       | Flags (+account?:cda)                             |
-|---------------------------------------|---------------------------------------------------|---------------------------------------------------|
-| `:MailEmailFlag`                      | Show the details to a mail flag                   | flag?:cf |
-| `:MailEmailFlagList`                  | List all mail tags                                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailEmailFlagCreate`                | Create a mail tag                                 | tbd (defined by himalaya) |
-| `:MailEmailFlagEdit`                  | Edit a mail tag                                   | flag?:cf |
-| `:MailEmailFlagSave`                  | Save a mail tag                                   | flag?:cf, overwrite?:f |
-| `:MailEmailFlagDelete`                | Delete a mail tag                                 | flag?:cf!! |
+| MailTag Commands <div style="width: 360px"></div>              | Status | Description | Flags (+account?:cda) |
+|---|:---:|---|---|
+| `:MailEmailFlag`                         | ❌ | Show the details to a mail flag                   | flag?:cf |
+| `:MailEmailFlagList`                     | ❌ | List all mail tags                                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailEmailFlagCreate`                   | ❌ | Create a mail tag                                 | tbd (defined by himalaya) |
+| `:MailEmailFlagEdit`                     | ❌ | Edit a mail tag                                   | flag?:cf |
+| `:MailEmailFlagSave`                     | ❌ | Save a mail tag                                   | flag?:cf, overwrite?:f |
+| `:MailEmailFlagDelete`                   | ❌ | Delete a mail tag                                 | flag?:cf!! |
 
 
 
