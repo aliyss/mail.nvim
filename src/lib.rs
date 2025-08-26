@@ -1,3 +1,5 @@
+pub mod commands;
+
 use nvim_oxi as nvim;
 
 #[nvim::plugin]

@@ -161,8 +161,8 @@ All commands related to getting help about mail.nvim. As well as information abo
 | `:MailLicense`                           | ❌ | license                                           | |
 | `:MailContribute`                        | ❌ | contribute information                            | |
 | `:MailSupport`                           | ❌ | support information                               | |
-| `:MailReportIssue`                       | ❌ | Open the mail.nvim issue tracker                  | |
-| `:MailRequestFeature`                    | ❌ | Open the mail.nvim feature request tracker        | |
+| `:MailIssueReport`                       | ❌ | Open the mail.nvim issue tracker                  | |
+| `:MailFeatureRequest`                    | ❌ | Open the mail.nvim feature request tracker        | |
 
 
 ### Mail UI
