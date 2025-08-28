@@ -8,7 +8,7 @@ use nvim::api;
 use nvim::api::opts::CreateCommandOpts;
 use nvim::api::types::CommandArgs;
 
-use ui::Open;
+use ui::{Close, Open, Refresh, Toggle};
 
 pub trait UserCommand
 where
@@ -17,7 +17,7 @@ where
     /// The name of the command to be executed (e.g., `"MailUI"` for `:MailUI`).
     const NAME: &'static str;
 
-    /// A brief explaination of the command.
+    /// A brief explanation of the command.
     const DESCRIPTION: &'static str;
 
     /// Create a new user command and register it to Neovim.
@@ -33,6 +33,9 @@ where
 }
 
 pub fn register_commands() -> Result<(), api::Error> {
+    Close::register()?;
     Open::register()?;
+    Refresh::register()?;
+    Toggle::register()?;
     Ok(())
 }

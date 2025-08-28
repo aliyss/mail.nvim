@@ -1,13 +1,13 @@
 use nvim_oxi as nvim;
 
 use nvim::Object;
+use nvim::api;
 use nvim::api::opts::{OptionOpts, OptionScope, SetKeymapOpts};
 use nvim::api::types::{CommandArgs, Mode};
-use nvim::api::{self, Buffer};
 
 use crate::bail;
 use crate::commands::UserCommand;
-use crate::state::STATE;
+use crate::commands::ui::{get_buffer, render};
 
 pub struct Open;
 
@@ -17,7 +17,7 @@ impl UserCommand for Open {
 
     fn callback(_: CommandArgs) {
         if get_buffer().is_some() {
-            return; // Drawer is already open.
+            return; // The drawer is already open.
         }
 
         let in_buffer_list = false;
@@ -40,14 +40,14 @@ impl UserCommand for Open {
         }
 
         let options: [(&'static str, Object); 5] = [
-            // Allows users to use `ftplugin` to style the buffer.
-            ("filetype", Object::from("mail_ui")),
+            // Allows users to use `ftplugin` to customize the buffer.
+            ("filetype", Object::from("mail-ui")),
             // Prevents users from saving the file.
             ("buftype", Object::from("nofile")),
             // Line numbers are not relevant in this buffer.
             ("number", Object::from(false)),
             ("relativenumber", Object::from(false)),
-            // Prevent users from entering INSERT mode.
+            // Prevents users from entering INSERT mode.
             ("modifiable", Object::from(false)),
         ];
 
@@ -62,6 +62,7 @@ impl UserCommand for Open {
         let keymaps: [(Mode, &'static str, &'static str); 2] = [
             // Close the Mail UI drawer.
             (Mode::Normal, "q", ":bd<CR>"),
+            // Toggle the extended help message.
             (
                 Mode::Normal,
                 "?",
@@ -77,66 +78,6 @@ impl UserCommand for Open {
             }
         }
 
-        temporary_render_function(&mut buffer);
-    }
-}
-
-pub fn toggle_help(_: Object) {
-    match STATE.write() {
-        Ok(mut state) => {
-            state.display_help = !state.display_help;
-        }
-        Err(err) => bail!("failed to acquire lock: {err}"),
-    }
-
-    let Some(mut buffer) = get_buffer() else {
-        bail!("failed to get Mail UI buffer");
-    };
-
-    temporary_render_function(&mut buffer);
-}
-
-fn is_drawer(buffer: Buffer) -> bool {
-    let opts = OptionOpts::builder()
-        .scope(OptionScope::Local)
-        .buffer(buffer)
-        .build();
-
-    let value = api::get_option_value::<String>("filetype", &opts);
-    value.is_ok_and(|filetype| &filetype == "mail_ui")
-}
-
-fn get_buffer() -> Option<Buffer> {
-    api::list_bufs().find(|buffer| is_drawer(buffer.clone()))
-}
-
-fn temporary_render_function(buffer: &mut Buffer) {
-    if !is_drawer(buffer.clone()) {
-        return;
-    }
-
-    let mut replacement = vec!["Press ? for help", ""];
-
-    let Ok(state) = STATE.read() else {
-        bail!("failed to acquire lock");
-    };
-
-    if state.display_help {
-        replacement.push("q - Close the Mail UI drawer");
-        replacement.push("");
-    }
-
-    let opts = OptionOpts::builder().scope(OptionScope::Local).build();
-    if let Err(err) = api::set_option_value("modifiable", true, &opts) {
-        bail!("failed to set option value: {err}");
-    }
-
-    // An unbound range on both ends (i.e., `..`) means to replace the whole buffer.
-    if let Err(err) = buffer.set_lines(.., false, replacement) {
-        bail!("failed to update buffer content: {err}");
-    }
-
-    if let Err(err) = api::set_option_value("modifiable", false, &opts) {
-        bail!("failed to set option value: {err}");
+        render(&mut buffer);
     }
 }
