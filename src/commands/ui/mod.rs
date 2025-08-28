@@ -33,7 +33,7 @@ pub fn toggle_help(_: Object) {
         Err(err) => bail!("failed to acquire lock: {err}"),
     }
 
-    let Some(mut buffer) = get_buffer() else {
+    let Some(mut buffer) = get_drawer_buffer() else {
         bail!("failed to get Mail UI buffer");
     };
 
@@ -48,11 +48,11 @@ pub(crate) fn is_drawer(buffer: Buffer) -> bool {
         .build();
 
     let value = api::get_option_value::<String>("filetype", &opts);
-    value.is_ok_and(|filetype| &filetype == "mail-ui")
+    value.is_ok_and(|filetype| &filetype == "mail_ui")
 }
 
 /// Loops through the open buffers to find the Mail UI drawer.
-pub(crate) fn get_buffer() -> Option<Buffer> {
+pub(crate) fn get_drawer_buffer() -> Option<Buffer> {
     api::list_bufs().find(|buffer| is_drawer(buffer.clone()))
 }
 
@@ -69,7 +69,7 @@ pub(crate) fn render(buffer: &mut Buffer) {
     };
 
     if state.display_help {
-        replacement.push("q - Close the Mail UI drawer");
+        replacement.push("q - Exit");
         replacement.push("");
     }
 

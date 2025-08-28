@@ -7,7 +7,7 @@ use nvim::api::types::{CommandArgs, Mode};
 
 use crate::bail;
 use crate::commands::UserCommand;
-use crate::commands::ui::{get_buffer, render};
+use crate::commands::ui::{get_drawer_buffer, render};
 
 pub struct Open;
 
@@ -16,7 +16,7 @@ impl UserCommand for Open {
     const DESCRIPTION: &'static str = "Opens the Mail UI drawer";
 
     fn callback(_: CommandArgs) {
-        if get_buffer().is_some() {
+        if get_drawer_buffer().is_some() {
             return; // The drawer is already open.
         }
 
@@ -61,7 +61,7 @@ impl UserCommand for Open {
 
         let keymaps: [(Mode, &'static str, &'static str); 2] = [
             // Close the Mail UI drawer.
-            (Mode::Normal, "q", ":bd<CR>"),
+            (Mode::Normal, "q", ":bdelete<CR>"),
             // Toggle the extended help message.
             (
                 Mode::Normal,
