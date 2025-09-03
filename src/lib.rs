@@ -1,3 +1,4 @@
+pub mod api;
 pub mod commands;
 
 use nvim_oxi as nvim;
