@@ -1,4 +1,4 @@
-mod config_email_view_as;
+pub mod config_email_view_as;
 
 use std::collections::HashMap;
 

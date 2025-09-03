@@ -5,6 +5,7 @@ use directories::ProjectDirs;
 use derive_builder::Builder;
 
 use crate::api::config::config_email::ConfigEmail;
+use crate::api::config::config_email::config_email_view_as::ConfigEmailViewAs;
 
 /// Configuration for all settings within the Mailbox.
 #[derive(Debug, Builder, Clone)]
@@ -42,11 +43,54 @@ impl<'a> ConfigBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use crate::api::config::ViewAsFormat;
+
     use super::*;
 
     #[test]
     fn test_config_builder() {
         let config = Config::builder().build().unwrap();
+        println!("{config:?}");
+    }
+
+    #[test]
+    fn test_config_builder_with_email_config() {
+        let binding = HashMap::from([
+            (
+                "json".to_string(),
+                ConfigEmailViewAs::builder()
+                    .format(ViewAsFormat::Json)
+                    .command("jq .")
+                    .capture_output(true)
+                    .build()
+                    .unwrap(),
+            ),
+            (
+                "html".to_string(),
+                ConfigEmailViewAs::builder()
+                    .format(ViewAsFormat::HTML)
+                    .command("w3m -T text/html")
+                    .capture_output(true)
+                    .build()
+                    .unwrap(),
+            ),
+            (
+                "plain".to_string(),
+                ConfigEmailViewAs::builder()
+                    .format(ViewAsFormat::Plain)
+                    .command("cat")
+                    .capture_output(true)
+                    .build()
+                    .unwrap(),
+            ),
+        ]);
+        let email_config = ConfigEmail::builder()
+            .view_as_commands(&binding)
+            .build()
+            .unwrap();
+        let config = Config::builder().email(&email_config).build().unwrap();
         println!("{config:?}");
     }
 }
