@@ -1,0 +1,129 @@
+mail_nvim.txt*
+
+        mail.nvim - Advanced Mail Client for Neovim
+
+Author: Aliyss <https://github.com/aliyss>
+License: MIT
+
+mail_nvim			    *mail_nvim*
+
+1. Introduction				    |mail.nvim-introduction|
+2. Install				    	|mail.nvim-install|
+3. Commands 		    		|mail.nvim-commands|
+4. Mappings				    	|mail.nvim-mappings|
+5. Table helpers 		   	    |mail.nvim-table-helpers|
+6. Bind parameters 		   	    |mail.nvim-bind-parameters|
+7. Settings				    	|mail.nvim-settings|
+8. Functions				    |mail.nvim-functions|
+9. Autocommands 			    |mail.nvim-autocommands|
+10. Highlights 			        |mail.nvim-highlights|
+
+==============================================================================
+1. Introduction					*mail.nvim-introduction*
+
+mail.nvim is a UI for pimalaya's awesome himalaya CLI tool.
+
+Main features:
+
+1. Navigate through multiple accounts and it's folders 
+2. Several ways to define your accounts
+3. Save searches for later use
+4. Read, compose, reply, forward and delete emails
+5. Mappings for all actions
+6. Statusline function to show current account and folder
+7. Notifications for errors, warnings and info
+
+==============================================================================
+2. Install					*mail.nvim-install*
+
+Requirements:
+- Cargo: https://crates.io/
+
+
+Install with your favorite package manager. If you don't have one, I suggest:
+
+Configuration with lazy.nvim (https://github.com/folke/lazy.nvim)
+>
+    return {
+      'aliyss/mail.nvim',
+      ...
+    }
+<
+
+Or vim-plug (https://github.com/junegunn/vim-plug)
+>
+    Plug 'aliyss/mail.nvim'
+<
+
+Execute `:MailUI` command
+
+==============================================================================
+3. Commands 					*mail.nvim-commands*
+
+					      *MailUI*
+MailUI
+		Open drawer with available connections, or an option to add
+		connection if there isn't any. Supports `<mods>`, which means
+		that you can open the drawer for example in new tab like this:
+		`:tab `MailUI
+
+		`:MailUI`
+
+==============================================================================
+4. Mappings					*mail.nvim-mappings*
+
+					      *<Plug>(MAILUI_SelectLine)*
+<Plug>(MAILUI_SelectLine)
+		This mapping is used for toggling and opening everything in
+		the HimalayaUI drawer.
+
+		By default, mapped to `o`, `Enter` and `Double click` .
+
+==============================================================================
+7. Settings					*mail.nvim-settings*
+
+					      *g:mail_ui_save_location*
+g:mail_ui_save_location
+		Path to folder where all mail.nvim configuration and MailUI will be
+		stored. It can be ralative or absolute path. Do not add a
+		leading slash.
+
+		Default value: `~/.local/share/mail_nvim
+
+==============================================================================
+8. Functions					*mail.nvim-functions*
+
+					      *mail_ui#statusline()*
+mail_ui#statusline({opts})
+		No clue what to write here yet.
+>
+
+==============================================================================
+9. Autocommands					*mail.nvim-autocommands*
+
+					      *MailUIOpened*
+MailUIOpened
+		This autocommand is triggered when mailui drawer is opened, and
+		everything is set up. For example, to load additional
+		accounts from custom env file using `vim-dotenv`, you could
+		do have something like this in your vimrc to load them:
+
+		`autocmd User MailUIOpened let b:dotenv = DotenvRead('.envrc') | norm R`
+
+==============================================================================
+10. Highlights					*mail.nvim-highlights*
+
+To customize the colors of the notifications, add these custom hl groups:
+* `NotificationInfo`
+* `NotificationWarning`
+* `NotificationError`
+
+For example, to use white text on blue(info) / yellow(warning) / red(error) background,
+add this to your vimrc/init.vim:
+>
+    hi NotificationInfo guifg=#FFFFFF guibg=#0000FF
+    hi NotificationWarning guifg=#FFFFFF guibg=#FFFF00
+    hi NotificationError guifg=#FFFFFF guibg=#FF0000
+<
+
+vim:tw=78:ts=8:ft=help:norl:noet:fen:noet:

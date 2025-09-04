@@ -303,3 +303,10 @@ When viewing an email, you can toggle between different views by using `:MailEma
 
 As you can see, I use `mhonarc` to convert the email to HTML and `chawan` to view it in the terminal. You can use any other tools of your choice.
 Make sure to install them first though.
+
+## Debugging
+Run the command to build and run the plugin in one call
+
+```bash
+cargo build; cp ./target/debug/libmail_nvim.so ./lua/mail_nvim.so; nvim -c ":set rtp+=./" -c ":lua require(\"mail_nvim\")"
+```

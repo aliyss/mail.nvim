@@ -7,5 +7,15 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+derive_builder = "0.20.2"
+directories = "6.0.0"
+imap-client = { git = "https://github.com/aliyss/imap-client", branch = "master" }
+himalaya = { git = "https://github.com/pimalaya/himalaya", branch = "master" }
 nvim-oxi = { version = "0.6.0", features = ["neovim-0-11", "test"] }
 
+[patch.crates-io]
+# Required due to imap-client having the rustls-platform-verifier which somehow breaks building himalaya
+# See: https://github.com/pimalaya/imap-client/issues/17
+imap-client = { git = "https://github.com/aliyss/imap-client", branch = "master" }
+# After successfully using the imap-client, we also need to patch  serde-toml-merge which is used by himalaya because the newer version of serde-toml-merge uses toml 0.9.5 which is incompatible with pimalaya-tui that uses toml 0.8
+serde-toml-merge = { git = "https://github.com/jdrouet/serde-toml-merge", rev = "a963672ec1b6186fbc07fecefdcb7584a54ecc6b" }
