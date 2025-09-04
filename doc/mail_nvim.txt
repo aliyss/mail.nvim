@@ -8,15 +8,15 @@ License: MIT
 mail_nvim			    *mail_nvim*
 
 1. Introduction				    |mail.nvim-introduction|
-2. Install				    |mail.nvim-install|
-3. Commands 		    		    |mail.nvim-commands|
-4. Mappings				    |mail.nvim-mappings|
+2. Install				    	|mail.nvim-install|
+3. Commands 		    		|mail.nvim-commands|
+4. Mappings				    	|mail.nvim-mappings|
 5. Table helpers 		   	    |mail.nvim-table-helpers|
 6. Bind parameters 		   	    |mail.nvim-bind-parameters|
-7. Settings				    |mail.nvim-settings|
+7. Settings				    	|mail.nvim-settings|
 8. Functions				    |mail.nvim-functions|
 9. Autocommands 			    |mail.nvim-autocommands|
-10. Highlights 			            |mail.nvim-highlights|
+10. Highlights 			        |mail.nvim-highlights|
 
 ==============================================================================
 1. Introduction					*mail.nvim-introduction*
