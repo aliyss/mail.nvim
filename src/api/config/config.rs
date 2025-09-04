@@ -5,7 +5,6 @@ use directories::ProjectDirs;
 use derive_builder::Builder;
 
 use crate::api::config::config_email::ConfigEmail;
-use crate::api::config::config_email::config_email_view_as::ConfigEmailViewAs;
 
 /// Configuration for all settings within the Mailbox.
 #[derive(Debug, Builder, Clone)]
@@ -21,6 +20,13 @@ pub struct Config<'a> {
     /// Email config
     #[builder(setter(into, strip_option), default)]
     email: Option<&'a ConfigEmail<'a>>,
+    /// UserHandholding
+    #[builder(setter(into, strip_option), default)]
+    user_handholding: Option<bool>,
+
+    /// UserHandHandholding
+    #[builder(setter(into, strip_option), default)]
+    user_handhandholding: Option<bool>,
 }
 
 impl<'a> Config<'a> {
@@ -45,9 +51,11 @@ impl<'a> ConfigBuilder<'a> {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::api::config::ViewAsFormat;
+    use crate::api::api_prelude::ViewAsFormat;
+    use crate::api::config::config_email::ConfigEmail;
+    use crate::api::config::config_email::config_email_view_as::ConfigEmailViewAs;
 
-    use super::*;
+    use super::Config;
 
     #[test]
     fn test_config_builder() {

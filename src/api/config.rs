@@ -6,10 +6,3 @@
 
 mod config;
 mod config_email;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ViewAsFormat {
-    Plain,
-    Json,
-    HTML,
-}

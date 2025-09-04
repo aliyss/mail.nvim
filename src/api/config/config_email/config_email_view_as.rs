@@ -1,4 +1,4 @@
-use crate::api::config::ViewAsFormat;
+use crate::api::api_prelude::ViewAsFormat;
 use derive_builder::Builder;
 
 /// ViewAs configuration options.
