@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+
+# A convenience script that implements nvim-oxi's post-build instructions:
+# https://github.com/noib3/nvim-oxi/blob/b1278b123dbac3908f2686ebed6fdadbfef15be1/examples/README.md?plain=1#L106
+
+set -eo pipefail
+[ ! -z "${TRACE+x}" ] && set -x
+
+main() {
+    if ! command -v cargo > /dev/null; then
+        echo >&2 "error: expected cargo to be installed and on PATH"
+        exit 1
+    fi
+
+    cargo build --release
+
+    # The name of the compiled library file can vary depending on the OS.
+    local source_file="$(
+        find ./target/release \
+            -maxdepth 1 \
+            -type f \
+            -regex '.*mail_nvim\.\(so\|dylib\|dll\)'
+    )"
+
+    local target_dir="lua"
+    # Take the name of built library file and remove the "lib" prefix.
+    local target_file="$(basename "$source_file" | sed 's/^lib//')"
+
+    mkdir --parents "$target_dir" && cp "$source_file" "$target_dir/$target_file"
+}
+
+main "$@"
