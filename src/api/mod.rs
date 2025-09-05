@@ -1,3 +1,3 @@
-pub mod api_prelude;
 pub mod config;
 pub mod help;
+pub mod prelude;

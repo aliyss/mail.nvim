@@ -1,18 +1,12 @@
-use nvim_oxi as nvim;
-
 use nvim::Object;
-use nvim::api;
-use nvim::api::opts::{OptionOpts, OptionScope, SetKeymapOpts};
-use nvim::api::types::{CommandArgs, Mode};
 
-use crate::bail;
-use crate::commands::UserCommand;
-use crate::commands::ui::{get_drawer_buffer, render};
+use super::{get_drawer_buffer, render};
+use crate::commands::prelude::*;
 
 pub struct Open;
 
 impl UserCommand for Open {
-    const NAME: &'static str = "MailUI";
+    const NAME: Name = Name::new("MailUI");
     const DESCRIPTION: &'static str = "Opens the Mail UI drawer";
 
     fn callback(_: CommandArgs) {
