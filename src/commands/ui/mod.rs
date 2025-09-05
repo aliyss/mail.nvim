@@ -9,6 +9,8 @@ pub use open::Open;
 pub use refresh::Refresh;
 pub use toggle::Toggle;
 
+use std::sync::{LazyLock, RwLock};
+
 use nvim_oxi as nvim;
 
 use nvim::Object;
@@ -16,7 +18,15 @@ use nvim::api::opts::{OptionOpts, OptionScope};
 use nvim::api::{self, Buffer};
 
 use crate::bail;
-use crate::state::STATE;
+
+pub static STATE: LazyLock<RwLock<State>> = LazyLock::new(|| RwLock::new(State::default()));
+
+/// Represents internal information that can be shared between function calls.
+#[derive(Debug, Clone, Default)]
+pub struct State {
+    /// Whether the extended help message is being displayed.
+    pub display_help: bool,
+}
 
 // Technically, there is no difference between `pub` and `pub(crate)` since the consumer of this
 // library is Lua, not Rust. However, semantically, I'm using `pub` to indicate the function
@@ -48,7 +58,7 @@ pub(crate) fn is_drawer(buffer: Buffer) -> bool {
         .build();
 
     let value = api::get_option_value::<String>("filetype", &opts);
-    value.is_ok_and(|filetype| &filetype == "mail_ui")
+    value.is_ok_and(|filetype| &filetype == "mail-ui")
 }
 
 /// Loops through the open buffers to find the Mail UI drawer.
