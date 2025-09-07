@@ -1,7 +1,6 @@
 pub mod config;
 pub mod help;
 pub mod prelude;
-pub mod setup;
 pub mod ui;
 
 use nvim_oxi as nvim;

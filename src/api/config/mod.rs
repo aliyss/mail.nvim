@@ -12,6 +12,8 @@ use std::path::PathBuf;
 use derive_builder::Builder;
 use directories::ProjectDirs;
 
+use crate::api::file::TryFile;
+
 /// Configuration for all settings within the Mailbox.
 #[derive(Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
@@ -38,13 +40,20 @@ impl Config {
     pub fn builder() -> ConfigBuilder {
         ConfigBuilder::default()
     }
+}
 
-    /// Save the configuration to a json file.
-    /// # Errors
-    /// Returns an error if the file cannot be written.
-    pub fn save_to_file(&self, path: &PathBuf) -> Result<(), String> {
-        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        std::fs::write(path, json).map_err(|e| e.to_string())
+impl TryFile for Config {
+    fn file_name() -> String {
+        "config.json".to_owned()
+    }
+
+    fn try_default() -> Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
+        Config::builder()
+            .build()
+            .map_err(|e| std::io::Error::other(format!("Failed to build default Config: {e}")))
     }
 }
 
@@ -79,7 +88,13 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("Expected default builder to be valid");
-        println!("{config:?}");
+        assert!(
+            config.mail_provider_location
+                == ConfigBuilder::set_mail_provider_location_default().unwrap()
+        );
+        assert!(config.email.is_none());
+        assert!(config.user_handholding.is_none());
+        assert!(config.user_handhandholding.is_none());
     }
 
     #[test]
@@ -115,6 +130,24 @@ mod tests {
         ]);
         let email_config = Email::builder().view_as_commands(binding).build().unwrap();
         let config = Config::builder().email(email_config).build().unwrap();
-        println!("{config:?}");
+        assert!(config.email.is_some());
+    }
+
+    #[test]
+    fn config_from_default_path() {
+        let config = Config::read_file(None);
+        assert!(config.is_ok());
+        let config = config.unwrap();
+        assert!(
+            config.mail_provider_location
+                == ConfigBuilder::set_mail_provider_location_default().unwrap()
+        );
+    }
+
+    #[test]
+    fn config_from_invalid_path() {
+        let config = Config::read_file(Some(PathBuf::from("/invalid/path/")));
+        println!("invalid path test result: {config:?}");
+        assert!(config.is_err());
     }
 }

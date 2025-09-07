@@ -1,13 +1,13 @@
 // TODO: Make sure that nvim print statements can be uncommented and still have tests compiled
-use std::path::PathBuf;
+use serde::Serialize;
 
 use directories::ProjectDirs;
 // use nvim_oxi as nvim;
 
-use crate::{
-    api::config::Config,
-    constants::{MAIL_APPLICATION, MAIL_ORGANIZATION, MAIL_QUALIFIER},
-};
+use crate::constants::{MAIL_APPLICATION, MAIL_ORGANIZATION, MAIL_QUALIFIER};
+
+use serde::de::DeserializeOwned;
+use std::path::PathBuf;
 
 /// Sets up the local data directory for the application.
 /// Returns the path to the local data directory.
@@ -30,15 +30,52 @@ pub fn setup_config_local_dir() -> Result<PathBuf, std::io::Error> {
     }
 }
 
-impl TryFrom<Option<PathBuf>> for Config {
-    type Error = std::io::Error;
+pub trait TryFile<Error = std::io::Error>
+where
+    Self: Sized,
+    Error: std::fmt::Display
+        + std::fmt::Debug
+        + From<std::io::Error>
+        + std::marker::Send
+        + std::marker::Sync
+        + std::error::Error
+        + 'static,
+{
+    fn file_name() -> String;
 
-    fn try_from(value: Option<PathBuf>) -> Result<Self, std::io::Error> {
+    /// Attempts to create a default instance of the implementing type.
+    /// # Errors
+    /// Returns an error if the default instance cannot be created.
+    fn try_default() -> Result<Self, Error>
+    where
+        Self: Sized;
+
+    /// Saves the current instance to a file at the specified path.
+    /// # Errors
+    /// Returns an error if the instance cannot be serialized or written to the file.
+    fn save_to_file(&self, path: &PathBuf) -> Result<(), Error>
+    where
+        Self: Serialize,
+    {
+        let serialized = serde_json::to_string_pretty(self)
+            .map_err(|e| std::io::Error::other(format!("Serialization error: {e}")))?;
+        std::fs::write(path, serialized)?;
+        Ok(())
+    }
+
+    /// Reads an instance of the implementing type from a file at the specified path.
+    /// # Errors
+    /// Returns an error if the file cannot be read or the instance cannot be deserialized.
+    fn read_file(value: Option<PathBuf>) -> Result<Self, Error>
+    where
+        Self: Sized + DeserializeOwned + Serialize,
+    {
         let default_config_location = setup_config_local_dir()?;
+        let file_name = Self::file_name();
 
         let config_location = match &value {
-            Some(path) => path.join("config.json"),
-            None => default_config_location.join("config.json"),
+            Some(path) => path.join(file_name),
+            None => default_config_location.join(file_name),
         };
 
         let config_data = match std::fs::read_to_string(&config_location) {
@@ -54,57 +91,37 @@ impl TryFrom<Option<PathBuf>> for Config {
                 if config_location != default_config_location.join("config.json")
                     || err.kind() != std::io::ErrorKind::NotFound
                 {
-                    return Err(err);
+                    return Err(err.into());
                 }
 
                 // If the file does not exist, create a default config file
-                let config = match Config::builder().build() {
+                let config = match Self::try_default() {
                     Ok(cfg) => cfg,
                     Err(err) => {
                         // nvim::print!("[{MAIL_PLUGIN_NAME}] Failed to create default config: {err}");
-                        return Err(std::io::Error::other(err));
+                        return Err(err);
                     }
                 };
-                if !default_config_location.exists() {
-                    std::fs::create_dir_all(default_config_location)?;
+                if !config_location.exists() {
+                    std::fs::create_dir_all(&config_location)?;
                 }
                 let _ = config.save_to_file(&config_location);
                 return Ok(config);
             }
         };
 
-        let config: Config = match serde_json::from_str(&config_data) {
+        let config: Self = match serde_json::from_str(&config_data) {
             Ok(cfg) => cfg,
             Err(err) => {
                 // nvim::print!(
                 //     "[{MAIL_PLUGIN_NAME}] Failed to parse config file at {config_location:?}: {err}"
                 // );
-                return Err(err.into());
+                return Err(
+                    std::io::Error::other(format!("Failed to parse config file: {err}")).into(),
+                );
             }
         };
 
         Ok(config)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::api::config::Config;
-    use std::path::PathBuf;
-
-    #[test]
-    fn test_config_try_from_none() {
-        let config = Config::try_from(None);
-        assert!(config.is_ok());
-        let config = config.unwrap();
-        println!("{config:?}");
-    }
-
-    #[test]
-    fn test_config_try_from_invalid_path() {
-        let config = Config::try_from(Some(PathBuf::from("/invalid/path/config.json")));
-        println!("invalid path test result: {config:?}");
-        assert!(config.is_err());
-        println!("{:?}", config.err());
     }
 }
