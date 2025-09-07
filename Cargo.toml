@@ -12,6 +12,8 @@ directories = "6.0.0"
 imap-client = { git = "https://github.com/aliyss/imap-client", branch = "master" }
 himalaya = { git = "https://github.com/pimalaya/himalaya", branch = "master" }
 nvim-oxi = { version = "0.6.0", features = ["neovim-0-11", "test"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
 
 [patch.crates-io]
 # Required due to imap-client having the rustls-platform-verifier which somehow breaks building himalaya

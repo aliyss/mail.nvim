@@ -1,29 +1,9 @@
 use std::collections::HashMap;
 
 use derive_builder::Builder;
+use serde::{Deserialize, Serialize};
 
-/// `ViewAs` configuration options.
-#[derive(Debug, Clone, Builder)]
-#[builder(setter(strip_option))]
-pub struct Email<'a> {
-    /// `ViewAs` command configuration.
-    #[builder(setter(into), default)]
-    view_as_commands: Option<&'a HashMap<String, ViewAs<'a>>>,
-
-    /// Default `view_as` command.
-    #[builder(setter(into), default)]
-    view_as_commands_default: Option<&'a str>,
-}
-
-impl<'a> Email<'a> {
-    /// Create a builder for the endpoint.
-    #[must_use]
-    pub fn builder() -> EmailBuilder<'a> {
-        EmailBuilder::default()
-    }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Format {
     #[default]
     Plain,
@@ -32,26 +12,47 @@ pub enum Format {
 }
 
 /// `ViewAs` configuration options.
-#[derive(Debug, Builder, Clone)]
+#[derive(Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
-pub struct ViewAs<'a> {
+pub struct ViewAs {
     /// Format of the output.
     #[builder(setter(into))]
     format: Format,
 
     /// Command to execute.
     #[builder(setter(into), default)]
-    command: Option<&'a str>,
+    command: Option<String>,
 
     /// Should capture output.
     #[builder(setter(into), default)]
     capture_output: Option<bool>,
 }
 
-impl<'a> ViewAs<'a> {
+impl ViewAs {
     /// Create a builder for the endpoint.
     #[must_use]
-    pub fn builder() -> ViewAsBuilder<'a> {
+    pub fn builder() -> ViewAsBuilder {
         ViewAsBuilder::default()
+    }
+}
+
+/// `Email` configuration options.
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
+#[builder(setter(strip_option))]
+pub struct Email {
+    /// `ViewAs` command configuration.
+    #[builder(setter(into), default)]
+    view_as_commands: Option<HashMap<String, ViewAs>>,
+
+    /// Default `view_as` command.
+    #[builder(setter(into), default)]
+    view_as_commands_default: Option<String>,
+}
+
+impl Email {
+    /// Create a builder for the endpoint.
+    #[must_use]
+    pub fn builder() -> EmailBuilder {
+        EmailBuilder::default()
     }
 }

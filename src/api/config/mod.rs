@@ -5,6 +5,7 @@ mod email;
 pub use email::{
     Email, EmailBuilder, EmailBuilderError, Format, ViewAs, ViewAsBuilder, ViewAsBuilderError,
 };
+use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
 
@@ -12,40 +13,54 @@ use derive_builder::Builder;
 use directories::ProjectDirs;
 
 /// Configuration for all settings within the Mailbox.
-#[derive(Debug, Builder, Clone)]
+#[derive(Debug, Builder, Clone, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
-pub struct Config<'a> {
+pub struct Config {
     /// Location of the setting to be set to.
-    #[builder(
-        setter(name = "himalaya_location"),
-        default = "ConfigBuilder::set_himalaya_location_default()?"
-    )]
-    himalaya_location: PathBuf,
+    #[builder(default = "ConfigBuilder::set_mail_provider_location_default()?")]
+    mail_provider_location: PathBuf,
 
     /// Email config
     #[builder(setter(into, strip_option), default)]
-    email: Option<&'a Email<'a>>,
+    email: Option<Email>,
+
     /// `UserHandholding`
     #[builder(setter(into, strip_option), default)]
     user_handholding: Option<bool>,
-
     /// `UserHandHandholding`
     #[builder(setter(into, strip_option), default)]
     user_handhandholding: Option<bool>,
 }
 
-impl<'a> Config<'a> {
+impl Config {
     /// Create a builder for the endpoint.
     #[must_use]
-    pub fn builder() -> ConfigBuilder<'a> {
+    pub fn builder() -> ConfigBuilder {
         ConfigBuilder::default()
+    }
+
+    /// Save the configuration to a json file.
+    /// # Errors
+    /// Returns an error if the file cannot be written.
+    pub fn save_to_file(&self, path: &PathBuf) -> Result<(), String> {
+        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        std::fs::write(path, json).map_err(|e| e.to_string())
     }
 }
 
-impl ConfigBuilder<'_> {
-    fn set_himalaya_location_default() -> Result<PathBuf, String> {
+impl ConfigBuilder {
+    fn set_mail_provider_location_default() -> Result<PathBuf, String> {
         if let Some(proj_dirs) = ProjectDirs::from("com", "pimalaya", "himalaya") {
             let config_dir = proj_dirs.config_dir();
+            let path = config_dir.to_path_buf();
+            if !path.exists() {
+                // TODO: This should automatically create the directory and start the himalaya
+                // configuration wizard.
+                return Err(
+                    "Configuration directory does not exist at {path:?}. Please create it first."
+                        .to_string(),
+                );
+            }
             Ok(config_dir.to_path_buf())
         } else {
             Err("Could not determine configuration directory".to_owned())
@@ -63,7 +78,7 @@ mod tests {
     fn config_builder() {
         let config = Config::builder()
             .build()
-            .expect("expected default builder to be valid");
+            .expect("Expected default builder to be valid");
         println!("{config:?}");
     }
 
@@ -98,8 +113,8 @@ mod tests {
                     .unwrap(),
             ),
         ]);
-        let email_config = Email::builder().view_as_commands(&binding).build().unwrap();
-        let config = Config::builder().email(&email_config).build().unwrap();
+        let email_config = Email::builder().view_as_commands(binding).build().unwrap();
+        let config = Config::builder().email(email_config).build().unwrap();
         println!("{config:?}");
     }
 }

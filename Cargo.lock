@@ -2447,6 +2447,8 @@ dependencies = [
  "himalaya",
  "imap-client",
  "nvim-oxi",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
