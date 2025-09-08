@@ -12,7 +12,7 @@ pub enum Format {
 }
 
 /// `ViewAs` configuration options.
-#[derive(Debug, Builder, Clone, Serialize, Deserialize)]
+#[derive(Debug, Builder, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct ViewAs {
     /// Format of the output.
@@ -37,7 +37,7 @@ impl ViewAs {
 }
 
 /// `Email` configuration options.
-#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct Email {
     /// `ViewAs` command configuration.
