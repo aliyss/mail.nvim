@@ -2449,6 +2449,7 @@ dependencies = [
  "nvim-oxi",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
