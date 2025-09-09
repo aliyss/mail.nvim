@@ -11,6 +11,7 @@ derive_builder = "0.20.2"
 directories = "6.0.0"
 imap-client = { git = "https://github.com/aliyss/imap-client", branch = "master" }
 himalaya = { git = "https://github.com/pimalaya/himalaya", branch = "master" }
+pimalaya-tui = { version = "0.2.2" }
 nvim-oxi = { version = "0.6.0", features = ["neovim-0-11", "test"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"

@@ -1,15 +1,14 @@
 //! This module contains the global configuration options for the application.
 
 mod email;
+mod provider;
 
 pub use email::{
     Email, EmailBuilder, EmailBuilderError, Format, ViewAs, ViewAsBuilder, ViewAsBuilderError,
 };
+pub use provider::{MailProvider, MailProviderBuilder, MailProviderBuilderError};
 
 use std::io;
-use std::path::PathBuf;
-
-use directories::ProjectDirs;
 
 use crate::api::file::TryFile;
 
@@ -18,8 +17,8 @@ use crate::api::file::TryFile;
 #[builder(setter(strip_option))]
 pub struct Config {
     /// Location of the setting to be set to.
-    #[builder(default = "self.mail_provider_location_default()?")]
-    mail_provider_location: PathBuf,
+    #[builder(default = "self.mail_provider_default()?")]
+    pub mail_provider: MailProvider,
 
     /// Email config
     #[builder(setter(into, strip_option), default)]
@@ -42,6 +41,21 @@ impl Config {
     }
 }
 
+impl ConfigBuilder {
+    #[expect(
+        clippy::unused_self,
+        reason = "this pattern is recommended by the derive_builder documentation"
+    )]
+    fn mail_provider_default(&self) -> Result<MailProvider, ConfigBuilderError> {
+        // TODO (Nic): Better mapping on errors.
+        MailProvider::builder().build().map_err(|_err| {
+            ConfigBuilderError::UninitializedField(
+                "failed to create/get default mail provider location",
+            )
+        })
+    }
+}
+
 impl TryFile for Config {
     type Error = io::Error;
 
@@ -57,34 +71,10 @@ impl TryFile for Config {
     }
 }
 
-impl ConfigBuilder {
-    #[expect(
-        clippy::unused_self,
-        reason = "this pattern is recommended by the derive_builder documentation"
-    )]
-    fn mail_provider_location_default(&self) -> Result<PathBuf, String> {
-        match ProjectDirs::from("com", "pimalaya", "himalaya") {
-            Some(project_dirs) => {
-                let path = project_dirs.config_dir().to_owned();
-
-                if !path.exists() {
-                    // TODO: Create the directory and start the himalaya configuration wizard.
-                    Err(format!("expected path to exist: {:#}", path.display()))
-                } else if !path.is_dir() {
-                    // TODO: Do we need to be able to differentiate between errors?
-                    Err(format!("expected path to directory: {:#}", path.display()))
-                } else {
-                    Ok(path)
-                }
-            }
-            None => Err("failed to get configuration directory".to_owned()),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     use super::*;
 
@@ -95,10 +85,11 @@ mod tests {
             .expect("Expected default builder to be valid");
 
         assert_eq!(
-            config.mail_provider_location,
-            ConfigBuilder::create_empty()
-                .mail_provider_location_default()
+            config.mail_provider.location,
+            MailProvider::builder()
+                .build()
                 .expect("failed to create/get default mail provider location")
+                .location
         );
         assert_eq!(config.email, None);
         assert_eq!(config.user_handholding, None);
@@ -156,10 +147,11 @@ mod tests {
             .expect("expected default configuration to be created automatically");
 
         assert_eq!(
-            config.mail_provider_location,
-            ConfigBuilder::create_empty()
-                .mail_provider_location_default()
+            config.mail_provider.location,
+            MailProvider::builder()
+                .build()
                 .expect("failed to create/get default mail provider location")
+                .location
         );
     }
 

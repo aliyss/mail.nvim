@@ -26,8 +26,6 @@ use crate::constants::{MAIL_APPLICATION, MAIL_ORGANIZATION, MAIL_QUALIFIER};
 pub fn prepare_default_data_directory() -> Result<PathBuf, io::Error> {
     match ProjectDirs::from(MAIL_QUALIFIER, MAIL_ORGANIZATION, MAIL_APPLICATION) {
         Some(project_dirs) => {
-            // XXX(Nic): Based on its usage in `TryFile::read_from_file`, I think this is meant
-            // to be `.config_local_dir()` instead.
             let path = project_dirs.data_local_dir().to_owned();
             assert!(path.is_absolute());
             fs::create_dir_all(&path)?;
@@ -87,6 +85,8 @@ where
     ///   configuration (e.g., due to lack of permissions).
     /// - We are unable to parse the configuration file.
     fn read_from_file(path: Option<PathBuf>) -> Result<Self, Self::Error> {
+        // TODO: Currently if the file is missing a field, the default value for that field is not
+        // being set.
         let path = if let Some(path) = path {
             path::absolute(&path)?
         } else {

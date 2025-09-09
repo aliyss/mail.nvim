@@ -11,6 +11,7 @@ pub mod api;
 pub mod commands;
 pub mod constants;
 pub mod macros;
+pub mod providers;
 
 use nvim_oxi as nvim;
 
