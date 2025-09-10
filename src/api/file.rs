@@ -35,7 +35,6 @@ pub fn prepare_default_data_directory() -> Result<PathBuf, io::Error> {
     }
 }
 
-/// A trait for (de)serializing data to (and from) a file.
 pub trait TryFile
 where
     Self: Sized + Serialize + DeserializeOwned,
@@ -102,8 +101,6 @@ where
             Err(err) if err.kind() == io::ErrorKind::NotFound => {
                 tracing::info!("writing default configuration to: {:#}", path.display());
                 fs::create_dir_all(path.parent().expect("expected path to be absolute"))?;
-                // XXX(Nic): Under what conditions can this fail? If we have control over the
-                // default configuration, can we change this to `std::default::Default`?
                 let config = Self::try_default()?;
                 config.write_to_file(&path)?;
                 Ok(config)

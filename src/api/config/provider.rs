@@ -4,7 +4,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MailProviderType {
     #[default]
     Himalaya,
@@ -19,45 +19,12 @@ pub struct MailProvider {
     pub location: PathBuf,
 
     /// Location of the setting to be set to.
-    #[builder(default = "self.mail_provider_location_file_name()?")]
+    #[builder(default = "self.mail_provider_location_file_name()")]
     pub file_name: PathBuf,
 
     /// Type of mail provider.
-    #[builder(setter(into), default = MailProviderType::Himalaya)]
+    #[builder(setter(into), field(ty = "MailProviderType"))]
     provider_type: MailProviderType,
-}
-
-impl MailProviderBuilder {
-    fn mail_provider_location_default(&self) -> Result<PathBuf, String> {
-        if self.provider_type == Some(MailProviderType::Himalaya) || self.provider_type.is_none() {
-            match ProjectDirs::from("com", "pimalaya", "himalaya") {
-                Some(project_dirs) => {
-                    let path = project_dirs.config_dir().to_owned();
-
-                    if !path.exists() {
-                        // TODO: Create the directory and start the himalaya configuration wizard.
-                        Err(format!("expected path to exist: {:#}", path.display()))
-                    } else if !path.is_dir() {
-                        // TODO: Do we need to be able to differentiate between errors?
-                        Err(format!("expected path to directory: {:#}", path.display()))
-                    } else {
-                        Ok(path)
-                    }
-                }
-                None => Err("failed to get configuration directory".to_owned()),
-            }
-        } else {
-            Err("unsupported mail provider type".to_owned())
-        }
-    }
-
-    fn mail_provider_location_file_name(&self) -> Result<PathBuf, String> {
-        if self.provider_type == Some(MailProviderType::Himalaya) || self.provider_type.is_none() {
-            Ok(PathBuf::from("config.toml"))
-        } else {
-            Err("unsupported mail provider type".to_owned())
-        }
-    }
 }
 
 impl MailProvider {
@@ -65,5 +32,35 @@ impl MailProvider {
     #[must_use]
     pub fn builder() -> MailProviderBuilder {
         MailProviderBuilder::default()
+    }
+}
+
+impl MailProviderBuilder {
+    fn mail_provider_location_default(&self) -> Result<PathBuf, String> {
+        let project_dirs = match self.provider_type {
+            MailProviderType::Himalaya => ProjectDirs::from("com", "pimalaya", "himalaya"),
+            // MailProviderType::Other => ProjectDirs::from("foo", "bar", "baz"),
+        }
+        .ok_or_else(|| "failed to get configuration directory".to_owned())?;
+
+        let path = project_dirs.config_dir();
+
+        if !path.exists() {
+            // TODO: Create the directory and start the himalaya configuration wizard.
+            Err(format!("expected path to exist: {:#}", path.display()))
+        } else if !path.is_dir() {
+            // TODO(Nic): Do we need to be able to differentiate between errors?
+            Err(format!("expected path to directory: {:#}", path.display()))
+        } else {
+            Ok(path.to_owned())
+        }
+    }
+
+    fn mail_provider_location_file_name(&self) -> PathBuf {
+        let file_name = match self.provider_type {
+            MailProviderType::Himalaya => "config.toml",
+        };
+
+        PathBuf::from(file_name)
     }
 }

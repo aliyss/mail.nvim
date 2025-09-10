@@ -48,6 +48,7 @@ impl ConfigBuilder {
     )]
     fn mail_provider_default(&self) -> Result<MailProvider, ConfigBuilderError> {
         // TODO (Nic): Better mapping on errors.
+        // N: Do you mean you want a custom error type here instead?
         MailProvider::builder().build().map_err(|_err| {
             ConfigBuilderError::UninitializedField(
                 "failed to create/get default mail provider location",
@@ -100,27 +101,24 @@ mod tests {
     fn config_builder_with_email_config() {
         let binding = HashMap::from([
             (
-                "json".to_owned(),
+                Format::Json,
                 ViewAs::builder()
-                    .format(Format::Json)
                     .command("jq .")
                     .capture_output(true)
                     .build()
                     .expect("expected hard-coded ViewAs format to be valid"),
             ),
             (
-                "html".to_owned(),
+                Format::Html,
                 ViewAs::builder()
-                    .format(Format::Html)
                     .command("w3m -T text/html")
                     .capture_output(true)
                     .build()
                     .expect("expected hard-coded ViewAs format to be valid"),
             ),
             (
-                "plain".to_owned(),
+                Format::Plain,
                 ViewAs::builder()
-                    .format(Format::Plain)
                     .command("cat")
                     .capture_output(true)
                     .build()

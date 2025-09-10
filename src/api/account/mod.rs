@@ -1,12 +1,41 @@
+pub mod commands;
+
+use pimalaya_tui::himalaya::config::Account as HimalayaAccount;
+
 pub struct Account {
-    pub name: String,
-    pub backends: Option<String>,
-    pub default: bool,
+    name: String,
+    backend: Option<String>,
+    default: bool,
 }
 
-pub trait List<P> {
-    /// Execute the list command using the provided mail provider.
-    /// # Errors
-    /// Returns an error if the command fails.
-    fn execute(self, provider: &P) -> Result<Vec<Account>, String>;
+impl Account {
+    #[must_use]
+    pub fn new(name: String, backend: Option<String>, default: bool) -> Self {
+        Self {
+            name,
+            backend,
+            default,
+        }
+    }
+
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[must_use]
+    pub fn backends(&self) -> Option<&str> {
+        self.backend.as_deref()
+    }
+
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        self.default
+    }
+}
+
+impl From<HimalayaAccount> for Account {
+    fn from(account: HimalayaAccount) -> Self {
+        Account::new(account.name, Some(account.backend), account.default)
+    }
 }
