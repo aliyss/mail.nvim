@@ -10,12 +10,14 @@ crate-type = ["cdylib"]
 derive_builder = "0.20.2"
 directories = "6.0.0"
 imap-client = { git = "https://github.com/aliyss/imap-client", branch = "master" }
+email-lib = { version = "0.26", default-features = false, features = ["tokio-rustls", "derive", "thread"] }
 himalaya = { git = "https://github.com/pimalaya/himalaya", branch = "master" }
-pimalaya-tui = { version = "0.2.2" }
+pimalaya-tui = { version = "0.2.2", features = ["email", "himalaya"] }
 nvim-oxi = { version = "0.6.0", features = ["neovim-0-11", "test"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
 tracing = "0.1.41"
+tokio = { version = "1.47.1", features = ["test-util"] }
 
 [patch.crates-io]
 # Required due to imap-client having the rustls-platform-verifier which somehow breaks building himalaya

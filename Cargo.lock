@@ -2444,12 +2444,14 @@ version = "0.1.0"
 dependencies = [
  "derive_builder 0.20.2",
  "directories",
+ "email-lib",
  "himalaya",
  "imap-client",
  "nvim-oxi",
  "pimalaya-tui",
  "serde",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 

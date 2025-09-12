@@ -1,7 +1,6 @@
 pub mod commands;
 
-use pimalaya_tui::himalaya::config::Account as HimalayaAccount;
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Account {
     name: String,
     backend: Option<String>,
@@ -31,11 +30,5 @@ impl Account {
     #[must_use]
     pub fn is_default(&self) -> bool {
         self.default
-    }
-}
-
-impl From<HimalayaAccount> for Account {
-    fn from(account: HimalayaAccount) -> Self {
-        Account::new(account.name, Some(account.backend), account.default)
     }
 }

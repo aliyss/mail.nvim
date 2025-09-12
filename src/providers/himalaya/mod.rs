@@ -1,4 +1,5 @@
-mod list;
+mod account;
+mod folder;
 
 use crate::api::config::Config;
 use std::path::PathBuf;
@@ -55,6 +56,7 @@ impl HimalayaProvider {
         HimalayaProvider::from_path(mail_provider.location.join(&mail_provider.file_name))
     }
 
+    #[must_use]
     pub fn config(&self) -> &HimalayaTomlConfig {
         &self.config
     }
