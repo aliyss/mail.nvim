@@ -1,6 +1,13 @@
 use crate::api::account::commands::Get;
-use pimalaya_tui::{himalaya::config::HimalayaTomlAccountConfig, terminal::config::TomlConfig};
-use std::convert::Infallible;
+use pimalaya_tui::himalaya::backend::Backend;
+use pimalaya_tui::{
+    himalaya::{
+        backend::{BackendBuilder, ContextBuilder},
+        config::HimalayaTomlAccountConfig,
+    },
+    terminal::config::TomlConfig,
+};
+use std::{convert::Infallible, sync::Arc};
 
 use email::{account::config::AccountConfig, config::Config as EmailConfig};
 use pimalaya_tui::himalaya::config::Account as HimalayaAccount;
@@ -46,4 +53,29 @@ pub fn himalaya_account_config_from_account(
         .expect("failed to get email account config");
 
     Ok((himalaya_account_config, email_account_config))
+}
+
+// TODO: Move this to himalaya provider?
+pub async fn himalaya_backend_from_account(
+    himalaya_provider: &HimalayaProvider,
+    account: Option<&Account>,
+    f: impl Fn(
+        email::backend::BackendBuilder<ContextBuilder>,
+    ) -> email::backend::BackendBuilder<ContextBuilder>,
+) -> Result<Backend, Infallible> {
+    let (himalaya_account_config, email_account_config) =
+        himalaya_account_config_from_account(himalaya_provider, account)
+            .expect("failed to get account config");
+
+    let backend = BackendBuilder::new(
+        himalaya_account_config.into(),
+        Arc::new(email_account_config),
+        f,
+    )
+    .without_sending_backend()
+    .build()
+    .await
+    .expect("failed to build backend");
+
+    Ok(backend)
 }

@@ -35,7 +35,7 @@ pub trait Get {
 pub trait Create {
     type Error: error::Error + Send + Sync + 'static;
 
-    /// Execute the get command using the provided mail provider.
+    /// Execute the create command using the provided mail provider.
     ///
     /// # Errors
     ///
@@ -50,12 +50,45 @@ pub trait Create {
 pub trait Delete {
     type Error: error::Error + Send + Sync + 'static;
 
-    /// Execute the get command using the provided mail provider.
+    /// Execute the delete command using the provided mail provider.
+    /// This command removes the specified folder from the mail account including all its messages.
     ///
     /// # Errors
     ///
     /// Returns an error if the command fails.
     fn folders_delete(
+        &self,
+        account: Option<&Account>,
+        folder_id: &str,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
+}
+
+pub trait Expunge {
+    type Error: error::Error + Send + Sync + 'static;
+
+    /// Execute the expunge command using the provided mail provider.
+    /// This command removes all messages marked as deleted in the specified folder.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails.
+    fn folders_expunge(
+        &self,
+        account: Option<&Account>,
+        folder_id: &str,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
+}
+
+pub trait Purge {
+    type Error: error::Error + Send + Sync + 'static;
+
+    /// Execute the purge command using the provided mail provider.
+    /// This operation removes all messages in the specified folder, regardless of their flags.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command fails.
+    fn folders_purge(
         &self,
         account: Option<&Account>,
         folder_id: &str,

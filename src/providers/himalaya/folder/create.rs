@@ -1,13 +1,11 @@
+use crate::providers::himalaya::account::himalaya_backend_from_account;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::add::AddFolder;
-use pimalaya_tui::himalaya::backend::BackendBuilder;
 use std::convert::Infallible;
-use std::sync::Arc;
 
 use super::super::HimalayaProvider;
 use crate::api::account::Account;
 use crate::api::folder::commands::Create;
-use crate::providers::himalaya::account::himalaya_account_config_from_account;
 
 impl Create for HimalayaProvider {
     type Error = Infallible;
@@ -17,22 +15,12 @@ impl Create for HimalayaProvider {
         account: Option<&Account>,
         folder_name: &str,
     ) -> Result<(), Self::Error> {
-        let (himalaya_account_config, email_account_config) =
-            himalaya_account_config_from_account(self, account)
-                .expect("failed to get account config");
-        let backend = BackendBuilder::new(
-            himalaya_account_config.into(),
-            Arc::new(email_account_config),
-            |builder| {
-                builder
-                    .without_features()
-                    .with_add_folder(BackendFeatureSource::Context)
-            },
-        )
-        .without_sending_backend()
-        .build()
-        .await
-        .expect("failed to build backend");
+        let backend = himalaya_backend_from_account(self, account, |builder| {
+            builder
+                .without_features()
+                .with_add_folder(BackendFeatureSource::Context)
+        })
+        .await?;
 
         backend
             .add_folder(folder_name)

@@ -220,6 +220,8 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | `:MailFolderList`                        | ❌ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
 | `:MailFolderCreate`                      | ❌ | Create a mail folder                              | tbd (defined by himalaya) |
 | `:MailFolderRename`                      | ❌ | Rename a mail folder                              | folder?:cf |
+| `:MailFolderExpunge`                     | ❌ | Expunge a mail folder                             | folder?:cf!! |
+| `:MailFolderPurge`                       | ❌ | Purge a mail folder                               | folder?:cf!! |
 | `:MailFolderDelete`                      | ❌ | Delete a mail folder                              | folder?:cf!! |
 | `:MailFolderDefaultInboxSet`             | ❌ | Set the default inbox folder                      | folder?:cf!|
 | `:MailFolderDefaultInboxReset`           | ❌ | Reset the default inbox folder                    | folder?:cf! |

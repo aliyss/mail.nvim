@@ -4,8 +4,10 @@ use crate::api::folder::{Folder, FolderFlag};
 
 mod create;
 mod delete;
+mod expunge;
 mod get;
 mod list;
+mod purge;
 
 fn build_folder_params(
     folder: HimalayaFolder,
@@ -32,13 +34,6 @@ fn build_folder_params(
 impl From<HimalayaFolder> for Folder {
     fn from(folder: HimalayaFolder) -> Self {
         let (name, desc, flags, has_children) = build_folder_params(folder);
-        Folder::new(name, None, desc, flags, has_children)
-    }
-}
-
-impl From<&HimalayaFolder> for Folder {
-    fn from(folder: &HimalayaFolder) -> Self {
-        let (name, desc, flags, has_children) = build_folder_params(folder.clone());
         Folder::new(name, None, desc, flags, has_children)
     }
 }
