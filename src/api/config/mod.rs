@@ -2,6 +2,7 @@
 
 mod email;
 mod provider;
+mod ui;
 
 pub use email::{
     Email, EmailBuilder, EmailBuilderError, Format, ViewAs, ViewAsBuilder, ViewAsBuilderError,
