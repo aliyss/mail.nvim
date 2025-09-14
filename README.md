@@ -137,8 +137,8 @@ All commands related to configuring mail.nvim and himalaya.
 
 | MailConfig Commands                                            | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailConfig`                            | ❌ | Open the Mail Configuration Wizard                | |
-| `:MailConfigFile`                        | ❌ | Open the Mail Configuration File                  | |
+| `:MailConfig`                            | 🛠️ | Open the Mail Configuration Wizard                | |
+| `:MailConfigFile`                        | 🛠️ | Open the Mail Configuration File                  | |
 | `:MailConfigLocation`                    | ❌ | Set the location of the Mail Configuration        | dir |
 | `:MailConfigHimalayaFile`                | ❌ | Open the Himalaya Configuration File              | |
 | `:MailConfigHimalayaFileLocationSet`     | ❌ | Set the location of the Himalaya Configuration    | dir |
@@ -206,8 +206,8 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 
 | MailAccount Commands                                           | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailAccount`                           | ❌ | Show the details to the mail account              | account?:cda |
-| `:MailAccountList`                       | ❌ | List all configured mail accounts                 | |
+| `:MailAccount`                           | 🛠️ | Show the details to the mail account              | account?:cda |
+| `:MailAccountList`                       | 🛠️ | List all configured mail accounts                 | |
 | `:MailAccountAdd`                        | ❌ | Add a mail account                                | tbd (defined by himalaya) |
 | `:MailAccountEdit`                       | ❌ | Edit a mail account                               | account?:cda |
 | `:MailAccountRemove`                     | ❌ | Remove a mail account                             | account?:ca!! |
@@ -216,13 +216,13 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 
 | MailFolder Commands                                            | Status | Description | Flags (+account?:cda) |
 |---|:---:|---|---|
-| `:MailFolder`                            | ❌ | Show the details to the mail folder               | folder?:cf |
-| `:MailFolderList`                        | ❌ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailFolderCreate`                      | ❌ | Create a mail folder                              | tbd (defined by himalaya) |
+| `:MailFolder`                            | 🛠️ | Show the details to the mail folder               | folder?:cf |
+| `:MailFolderList`                        | 🛠️ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailFolderCreate`                      | 🛠️ | Create a mail folder                              | tbd (defined by himalaya) |
 | `:MailFolderRename`                      | ❌ | Rename a mail folder                              | folder?:cf |
-| `:MailFolderExpunge`                     | ❌ | Expunge a mail folder                             | folder?:cf!! |
-| `:MailFolderPurge`                       | ❌ | Purge a mail folder                               | folder?:cf!! |
-| `:MailFolderDelete`                      | ❌ | Delete a mail folder                              | folder?:cf!! |
+| `:MailFolderExpunge`                     | 🛠️ | Expunge a mail folder                             | folder?:cf!! |
+| `:MailFolderPurge`                       | 🛠️ | Purge a mail folder                               | folder?:cf!! |
+| `:MailFolderDelete`                      | 🛠️ | Delete a mail folder                              | folder?:cf!! |
 | `:MailFolderDefaultInboxSet`             | ❌ | Set the default inbox folder                      | folder?:cf!|
 | `:MailFolderDefaultInboxReset`           | ❌ | Reset the default inbox folder                    | folder?:cf! |
 | `:MailFolderDefaultDraftSet`             | ❌ | Set the default draft folder                      | folder?:cf! |
@@ -234,7 +234,7 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 | MailEmail Commands                                             | Status | Description | Flags (+account?:cda, +folder?:cdf)          |
 |---|:---:|---|---|
 | `:MailEmail`                             | ❌ | Show the details to an email                      | email?:ce, mark_read?:t |
-| `:MailEmailList`                         | ❌ | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailEmailList`                         | 🛠️ | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
 | `:MailEmailCreate`                       | ❌ | Create a new email                                | tbd (defined by himalaya) |
 | `:MailEmailSend`                         | ❌ | Send an email                                     | email?:ce! |
 | `:MailEmailReply`                        | ❌ | Reply to an email                                 | email?:ce |

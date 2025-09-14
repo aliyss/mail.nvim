@@ -1,4 +1,5 @@
 mod account;
+mod envelope;
 mod folder;
 
 use crate::api::config::Config;

@@ -56,6 +56,27 @@ pub fn himalaya_account_config_from_account(
 }
 
 // TODO: Move this to himalaya provider?
+pub async fn himalaya_backend_from_account_config(
+    himalaya_account_config: HimalayaTomlAccountConfig,
+    email_account_config: AccountConfig,
+    f: impl Fn(
+        email::backend::BackendBuilder<ContextBuilder>,
+    ) -> email::backend::BackendBuilder<ContextBuilder>,
+) -> Result<Backend, Infallible> {
+    let backend = BackendBuilder::new(
+        himalaya_account_config.into(),
+        Arc::new(email_account_config),
+        f,
+    )
+    .without_sending_backend()
+    .build()
+    .await
+    .expect("failed to build backend");
+
+    Ok(backend)
+}
+
+// TODO: Move this to himalaya provider?
 pub async fn himalaya_backend_from_account(
     himalaya_provider: &HimalayaProvider,
     account: Option<&Account>,

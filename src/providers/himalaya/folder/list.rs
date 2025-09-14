@@ -38,7 +38,7 @@ mod tests {
     use crate::api::config::Config;
 
     #[tokio::test]
-    async fn accounts_list() {
+    async fn folders_list() {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
