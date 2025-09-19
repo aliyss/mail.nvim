@@ -1,5 +1,8 @@
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
+use std::io;
+
+use crate::api::file::TryFile;
 
 /// Marker traits
 pub trait CommandGroup {}
@@ -104,6 +107,41 @@ where
     name: String,
     #[builder(setter(into), default)]
     components: Vec<UiViewComponent<CG, CT, CA, CC>>,
+}
+
+impl<
+    CG: CommandGroup + Clone + Serialize + for<'de> Deserialize<'de>,
+    CT: CommandType<CG> + Clone + Serialize + for<'de> Deserialize<'de>,
+    CA: CommandArguments<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
+    CC: CommandContext<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
+> UiView<CG, CT, CA, CC>
+{
+    /// Create a builder for the endpoint.
+    #[must_use]
+    pub fn builder() -> UiViewBuilder<CG, CT, CA, CC> {
+        UiViewBuilder::default()
+    }
+}
+
+impl<
+    CG: CommandGroup + Clone + Serialize + for<'de> Deserialize<'de>,
+    CT: CommandType<CG> + Clone + Serialize + for<'de> Deserialize<'de>,
+    CA: CommandArguments<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
+    CC: CommandContext<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
+> TryFile for UiView<CG, CT, CA, CC>
+{
+    type Error = io::Error;
+
+    const FILE_NAME: &'static str = "/views/default.json";
+
+    fn try_default() -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        UiView::builder().build().map_err(|err| {
+            io::Error::other(format!("failed to build default configuration: {err}"))
+        })
+    }
 }
 
 #[cfg(test)]
