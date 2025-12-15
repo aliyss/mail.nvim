@@ -1,63 +1,45 @@
-use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
-use std::io;
+use serde_json::Value;
+use std::{collections::HashMap, io};
 
 use crate::api::file::TryFile;
 
-/// Marker traits
-pub trait CommandGroup {}
-pub trait CommandType<CG: CommandGroup> {}
-pub trait CommandArguments<CG: CommandGroup, CT: CommandType<CG>> {}
-pub trait CommandContext<CG: CommandGroup, CT: CommandType<CG>> {}
-
-/// Represents the ui view component context configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
-#[builder(setter(strip_option))]
-pub struct UiViewComponentContext<CG, CT, CA, CC>
-where
-    CG: CommandGroup,
-    CT: CommandType<CG>,
-    CA: CommandArguments<CG, CT>,
-    CC: CommandContext<CG, CT>,
-{
-    #[builder(setter(into))]
-    command_group: CG,
-
-    #[builder(setter(into))]
-    command_type: CT,
-
-    #[builder(setter(into))]
-    arguments: CA,
-
-    #[builder(setter(into))]
-    context: CC,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiView {
+    pub name: String,
+    pub components: Vec<UiViewComponent>,
 }
 
-/// Represents the ui view component layout configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
-#[builder(setter(strip_option))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiViewComponent {
+    pub id: String,
+    pub name: String,
+    pub component_type: UiViewComponentType,
+    pub context: UiViewComponentContext,
+    pub layout: UiViewComponentLayout,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UiViewComponentContext {
+    pub command_group: String,
+    pub command_type: String,
+    pub arguments: HashMap<String, Value>,
+    pub context: HashMap<String, Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiViewComponentLayout {
-    #[builder(setter(into))]
-    position: String,
-
-    // (horizontal, vertical)
-    #[builder(setter(into))]
-    content_scrollable: (bool, bool),
-
-    // (x, y)
-    #[builder(setter(into))]
-    location: (u32, u32),
-
-    // (width, height)
-    #[builder(setter(into))]
-    size: (u32, Option<u32>),
-
-    // Whether the size is a percentage of the total available space.
-    #[builder(setter(into))]
-    size_as_percentage: bool,
+    pub position: String,
+    /// (horizontal, vertical)
+    pub content_scrollable: (bool, bool),
+    /// (x, y)
+    pub location: (u32, u32),
+    /// (width, height)
+    pub size: (u32, Option<u32>),
+    /// Whether size is a percentage of available space
+    pub size_as_percentage: bool,
 }
 
-/// Represents the ui view component type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UiViewComponentType {
     Table,
@@ -68,78 +50,16 @@ pub enum UiViewComponentType {
     Other(String),
 }
 
-/// Represents the ui view component configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
-#[builder(setter(strip_option))]
-pub struct UiViewComponent<CG, CT, CA, CC>
-where
-    CG: CommandGroup,
-    CT: CommandType<CG>,
-    CA: CommandArguments<CG, CT>,
-    CC: CommandContext<CG, CT>,
-{
-    #[builder(setter(into))]
-    id: String,
-
-    #[builder(setter(into))]
-    name: String,
-
-    #[builder(setter(into))]
-    component_type: UiViewComponentType,
-
-    #[builder(setter(into))]
-    context: UiViewComponentContext<CG, CT, CA, CC>,
-
-    #[builder(setter(into))]
-    layout: UiViewComponentLayout,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
-#[builder(setter(strip_option))]
-pub struct UiView<CG, CT, CA, CC>
-where
-    CG: CommandGroup,
-    CT: CommandType<CG>,
-    CA: CommandArguments<CG, CT>,
-    CC: CommandContext<CG, CT>,
-{
-    #[builder(setter(into))]
-    name: String,
-    #[builder(setter(into), default)]
-    components: Vec<UiViewComponent<CG, CT, CA, CC>>,
-}
-
-impl<
-    CG: CommandGroup + Clone + Serialize + for<'de> Deserialize<'de>,
-    CT: CommandType<CG> + Clone + Serialize + for<'de> Deserialize<'de>,
-    CA: CommandArguments<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
-    CC: CommandContext<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
-> UiView<CG, CT, CA, CC>
-{
-    /// Create a builder for the endpoint.
-    #[must_use]
-    pub fn builder() -> UiViewBuilder<CG, CT, CA, CC> {
-        UiViewBuilder::default()
-    }
-}
-
-impl<
-    CG: CommandGroup + Clone + Serialize + for<'de> Deserialize<'de>,
-    CT: CommandType<CG> + Clone + Serialize + for<'de> Deserialize<'de>,
-    CA: CommandArguments<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
-    CC: CommandContext<CG, CT> + Clone + Serialize + for<'de> Deserialize<'de>,
-> TryFile for UiView<CG, CT, CA, CC>
-{
+impl TryFile for UiView {
     type Error = io::Error;
 
-    const FILE_NAME: &'static str = "/views/default.json";
+    const FILE_NAME: &'static str = "views/default.json";
 
-    fn try_default() -> Result<Self, Self::Error>
-    where
-        Self: Sized,
-    {
-        UiView::builder().build().map_err(|err| {
-            io::Error::other(format!("failed to build default configuration: {err}"))
+    fn try_default() -> Result<Self, Self::Error> {
+        // Minimal but valid default view
+        Ok(UiView {
+            name: "Default View".into(),
+            components: Vec::new(),
         })
     }
 }
@@ -147,52 +67,110 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct TestCommandGroup;
-    impl CommandGroup for TestCommandGroup {}
-    struct TestCommandType;
-    impl CommandType<TestCommandGroup> for TestCommandType {}
-    struct TestCommandArguments {
-        account_name: Option<String>,
-        backend: Option<String>,
-        default: Option<bool>,
-    }
-    impl CommandArguments<TestCommandGroup, TestCommandType> for TestCommandArguments {}
-    struct TestCommandContext {
-        user_id: Option<String>,
-    }
-    impl CommandContext<TestCommandGroup, TestCommandType> for TestCommandContext {}
+    use serde_json::json;
+    use std::path::PathBuf;
 
     #[test]
-    fn make_test_view() {
-        let component_context = UiViewComponentContext {
-            command_group: TestCommandGroup,
-            command_type: TestCommandType,
-            arguments: TestCommandArguments {
-                account_name: None,
-                backend: None,
-                default: None,
-            },
-            context: TestCommandContext { user_id: None },
-        };
-        let component_layout = UiViewComponentLayout {
-            position: "left".into(),
-            content_scrollable: (true, true),
-            location: (0, 0),
-            size: (30, None),
-            size_as_percentage: true,
-        };
+    fn create_drawer_config() {
+        let mut arguments = HashMap::new();
+        arguments.insert("limit".into(), json!(4));
+
+        let mut context = HashMap::new();
+        context.insert("account".into(), json!("nic@aliyssium.com"));
+        context.insert("folder".into(), json!("inbox"));
+
         let component = UiViewComponent {
             id: "accounts".into(),
             name: "Account List".into(),
             component_type: UiViewComponentType::Drawer,
-            context: component_context,
-            layout: component_layout,
+            context: UiViewComponentContext {
+                command_group: "MailEmail".into(),
+                command_type: "List".into(),
+                arguments,
+                context,
+            },
+            layout: UiViewComponentLayout {
+                position: "left".into(),
+                content_scrollable: (true, true),
+                location: (0, 0),
+                size: (30, Some(10)),
+                size_as_percentage: true,
+            },
         };
-        let _view =
-            UiView::<TestCommandGroup, TestCommandType, TestCommandArguments, TestCommandContext> {
-                name: "Main View".into(),
-                components: vec![component],
-            };
+        assert_eq!(component.name, "Account List");
+        assert_eq!(component.component_type, UiViewComponentType::Drawer);
+        assert_eq!(component.context.command_group, "MailEmail");
+        assert_eq!(component.context.command_type, "List");
+        assert_eq!(component.context.arguments.get("limit"), Some(&json!(4)));
+    }
+
+    #[test]
+    fn create_view_with_multiple_components() {
+        let view = UiView {
+            name: "Main View".into(),
+            components: vec![
+                UiViewComponent {
+                    id: "drawer".into(),
+                    name: "Drawer".into(),
+                    component_type: UiViewComponentType::Drawer,
+                    context: UiViewComponentContext {
+                        command_group: "Mail".into(),
+                        command_type: "Tree".into(),
+                        arguments: HashMap::new(),
+                        context: HashMap::new(),
+                    },
+                    layout: UiViewComponentLayout {
+                        position: "left".into(),
+                        content_scrollable: (true, false),
+                        location: (0, 0),
+                        size: (30, None),
+                        size_as_percentage: true,
+                    },
+                },
+                UiViewComponent {
+                    id: "table".into(),
+                    name: "Table".into(),
+                    component_type: UiViewComponentType::Table,
+                    context: UiViewComponentContext {
+                        command_group: "Mail".into(),
+                        command_type: "List".into(),
+                        arguments: HashMap::new(),
+                        context: HashMap::new(),
+                    },
+                    layout: UiViewComponentLayout {
+                        position: "right".into(),
+                        content_scrollable: (true, true),
+                        location: (30, 0),
+                        size: (70, None),
+                        size_as_percentage: true,
+                    },
+                },
+            ],
+        };
+
+        assert_eq!(view.components.len(), 2);
+    }
+
+    #[test]
+    fn view_default_builder_like_behavior() {
+        let view = UiView::try_default().expect("expected default UiView to be valid");
+
+        assert_eq!(view.name, "Default View");
+        assert!(view.components.is_empty());
+    }
+
+    #[test]
+    fn view_from_default_path() {
+        let view = UiView::read_from_file(None)
+            .expect("expected default view to be created automatically");
+
+        assert_eq!(view.name, "Default View");
+        assert!(view.components.is_empty());
+    }
+
+    #[test]
+    fn view_from_invalid_path() {
+        UiView::read_from_file(Some(PathBuf::from("/invalid/path/to/view.json")))
+            .expect_err("expected hard-coded invalid path to fail");
     }
 }
