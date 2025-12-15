@@ -3,9 +3,9 @@
 
 /target
 
-lua/mail_nvim.so
-lua/mail_nvim.dylib
-lua/mail_nvim.dll
+/lua/mail_nvim.so
+/lua/mail_nvim.dylib
+/lua/mail_nvim.dll
 
 /rustfmt.toml
 /stylua.toml
