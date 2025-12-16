@@ -1,12 +1,8 @@
-use crate::api::file::TryFile;
 mod close;
-
 mod open;
 mod refresh;
 mod toggle;
 mod view;
-
-use crate::api::config::ui::view::UiView;
 
 pub use close::Close;
 pub use open::Open;
@@ -76,8 +72,7 @@ pub(crate) fn get_drawer_buffer() -> Option<Buffer> {
 // to it, but the actual contents should be generated using a view. We need to make a trait
 // for Views so this can be turned into a generic.
 pub(crate) fn render(buffer: &mut Buffer) {
-    let view = UiView::try_default().expect("expected default UiView to be valid");
-    let mut replacement = vec!["Press ? for help", &view.name];
+    let mut replacement = vec!["Press ? for help", ""];
 
     let Ok(state) = STATE.read() else {
         bail!("failed to acquire lock");

@@ -25,6 +25,10 @@ pub struct Config {
     #[builder(setter(into, strip_option), default)]
     email: Option<Email>,
 
+    /// Default path for UI views.
+    #[builder(setter(into, strip_option), default)]
+    pub default_view_path: Option<String>,
+
     /// Risky actions require confirmation.
     #[builder(setter(into, strip_option), default)]
     user_handholding: Option<bool>,
