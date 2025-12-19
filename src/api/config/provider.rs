@@ -24,7 +24,7 @@ pub struct MailProvider {
 
     /// Type of mail provider.
     #[builder(setter(into), field(ty = "MailProviderType"))]
-    provider_type: MailProviderType,
+    pub provider_type: MailProviderType,
 }
 
 impl MailProvider {
@@ -49,7 +49,6 @@ impl MailProviderBuilder {
             // TODO: Create the directory and start the himalaya configuration wizard.
             Err(format!("expected path to exist: {:#}", path.display()))
         } else if !path.is_dir() {
-            // TODO(Nic): Do we need to be able to differentiate between errors?
             Err(format!("expected path to directory: {:#}", path.display()))
         } else {
             Ok(path.to_owned())

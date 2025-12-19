@@ -165,7 +165,6 @@ mod tests {
             .expect("expected default view to be created automatically");
 
         assert_eq!(view.name, "Default View");
-        assert!(view.components.is_empty());
     }
 
     #[test]

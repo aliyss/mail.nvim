@@ -46,8 +46,10 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default configuration to be valid");
-        let provider = HimalayaProvider::from_config(&config)
-            .expect("failed to create Himalaya provider using default config");
+
+        let provider = config
+            .to_provider()
+            .expect("failed to create provider from config");
 
         _ = provider
             .get_default_account()

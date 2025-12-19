@@ -11,7 +11,10 @@ pub use provider::{MailProvider, MailProviderBuilder, MailProviderBuilderError};
 
 use std::io;
 
-use crate::api::file::TryFile;
+use crate::{
+    api::file::TryFile,
+    providers::{Provider, himalaya::HimalayaProvider},
+};
 
 /// Configuration for all settings within the Mailbox.
 #[derive(Debug, Clone, derive_builder::Builder, serde::Serialize, serde::Deserialize)]
@@ -26,8 +29,11 @@ pub struct Config {
     email: Option<Email>,
 
     /// Default path for UI views.
-    #[builder(setter(into, strip_option), default)]
-    pub default_view_path: Option<String>,
+    #[builder(
+        setter(into, strip_option),
+        default = "self.default_view_path_default()"
+    )]
+    pub default_view_path: String,
 
     /// Risky actions require confirmation.
     #[builder(setter(into, strip_option), default)]
@@ -44,6 +50,16 @@ impl Config {
     pub fn builder() -> ConfigBuilder {
         ConfigBuilder::default()
     }
+
+    /// Create a provider from the configuration.
+    ///
+    /// # Errors
+    /// Returns an error if the provider could not be created.
+    pub fn to_provider(&self) -> Result<impl Provider, anyhow::Error> {
+        // TODO: Requires so that we can support multiple providers, but based on the Provider
+        // trait... we have an issue with the arguments see DeleteFolder for example.
+        Ok(HimalayaProvider::from_config(self)?)
+    }
 }
 
 impl ConfigBuilder {
@@ -52,13 +68,18 @@ impl ConfigBuilder {
         reason = "this pattern is recommended by the derive_builder documentation"
     )]
     fn mail_provider_default(&self) -> Result<MailProvider, ConfigBuilderError> {
-        // TODO (Nic): Better mapping on errors.
-        // N: Do you mean you want a custom error type here instead?
         MailProvider::builder().build().map_err(|_err| {
             ConfigBuilderError::UninitializedField(
                 "failed to create/get default mail provider location",
             )
         })
+    }
+    #[expect(
+        clippy::unused_self,
+        reason = "this pattern is recommended by the derive_builder documentation"
+    )]
+    fn default_view_path_default(&self) -> String {
+        "default.json".into()
     }
 }
 

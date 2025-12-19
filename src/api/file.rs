@@ -85,9 +85,51 @@ where
     /// - We are unable to parse the configuration file.
     fn read_from_file(path: Option<PathBuf>) -> Result<Self, Self::Error> {
         // TODO: Currently if the file is missing a field, the default value for that field is not
-        // being set.
+        // being set. (see read_from_file_with_path)
         let path = if let Some(path) = path {
             path::absolute(&path)?
+        } else {
+            let directory_default = prepare_default_data_directory()?;
+            assert!(directory_default.is_absolute());
+            directory_default.join(Self::FILE_NAME)
+        };
+
+        match fs::read_to_string(&path) {
+            Ok(data) => serde_json::from_str(&data).map_err(|err| {
+                io::Error::other(format!("failed to parse configuration file: {err}")).into()
+            }),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                tracing::info!("writing default configuration to: {:#}", path.display());
+                fs::create_dir_all(path.parent().expect("expected path to be absolute"))?;
+                let config = Self::try_default()?;
+                config.write_to_file(&path)?;
+                Ok(config)
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// Construct an instance of `Self` from the given path, resolving relative paths
+    /// against the default data directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - We are unable to get the current directory.
+    /// - `path` is `Some` and the given path is an empty [`std::path::PathBuf`].
+    /// - `path` is `None` and we are unable to get the default configuration directory.
+    /// - The configuration file does not exist and we are unable to create the default
+    ///   configuration (e.g., due to lack of permissions).
+    /// - We are unable to parse the configuration file.
+    fn read_from_file_with_path(path: Option<PathBuf>) -> Result<Self, Self::Error> {
+        let path = if let Some(current_path) = path {
+            if current_path.is_absolute() {
+                current_path
+            } else {
+                let directory_default = prepare_default_data_directory()?;
+                assert!(directory_default.is_absolute());
+                directory_default.join(current_path)
+            }
         } else {
             let directory_default = prepare_default_data_directory()?;
             assert!(directory_default.is_absolute());

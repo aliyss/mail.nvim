@@ -1,7 +1,7 @@
 use nvim::Object;
 
 use super::{get_drawer_buffer, render};
-use crate::commands::prelude::*;
+use crate::commands::{prelude::*, ui::view::render_ui_view};
 
 pub struct Open;
 
@@ -73,5 +73,6 @@ impl UserCommand for Open {
         }
 
         render(&mut buffer);
+        render_ui_view(&mut buffer, None);
     }
 }

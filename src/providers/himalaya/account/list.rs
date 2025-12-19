@@ -23,8 +23,9 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("failed to build default config");
-        let provider = HimalayaProvider::from_config(&config)
-            .expect("failed to create Himalaya provider from default config");
+        let provider = config
+            .to_provider()
+            .expect("failed to create provider from config");
 
         let accounts = provider.list_accounts().expect("failed to list accounts");
 
