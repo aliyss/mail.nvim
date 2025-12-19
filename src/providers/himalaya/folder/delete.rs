@@ -1,42 +1,30 @@
-use crate::providers::himalaya::account::himalaya_backend_from_account;
+use anyhow::anyhow;
 use email::backend::feature::BackendFeatureSource;
-use email::folder::delete::DeleteFolder;
-use std::convert::Infallible;
+use email::folder::delete::DeleteFolder as _;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::folder::commands::Delete;
+use crate::api::folder::commands::DeleteFolder;
+use crate::providers::himalaya::HimalayaProvider;
 
-impl Delete for HimalayaProvider {
-    type Error = Infallible;
-
-    async fn folders_delete(
-        &self,
-        account: Option<&Account>,
-        folder_id: &str,
-    ) -> Result<(), Self::Error> {
-        let backend = himalaya_backend_from_account(self, account, |builder| {
+impl DeleteFolder for HimalayaProvider {
+    async fn delete_folder(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account, |builder| {
             builder
                 .without_features()
                 .with_delete_folder(BackendFeatureSource::Context)
         })
-        .await?;
-
-        backend
-            .delete_folder(folder_id)
-            .await
-            .expect("failed to delete folder");
-
-        Ok(())
+        .await?
+        .delete_folder(folder_id)
+        .await
+        .map_err(|err| anyhow!(err))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api::folder::commands::{Create, List},
-        constants::{MAIL_APPLICATION, MAIL_ORGANIZATION},
-    };
+    use crate::api::account::commands::GetAccount;
+    use crate::api::folder::commands::{CreateFolder as _, ListFolders as _};
+    use crate::constants::{MAIL_APPLICATION, MAIL_ORGANIZATION};
     use tokio;
 
     use super::*;
@@ -47,17 +35,20 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
+        let provider = HimalayaProvider::from_config(&config)
             .expect("expected to create himalaya provider from default config");
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
 
         let folder_id = format!("{MAIL_ORGANIZATION}-{MAIL_APPLICATION}");
 
-        let () = himalaya_provider
-            .folders_create(None, &folder_id)
+        provider
+            .create_folder(&account, &folder_id)
             .await
             .expect("expected to create folders");
-        let folders = himalaya_provider
-            .folders_list(None)
+        let folders = provider
+            .list_folders(&account)
             .await
             .expect("expected to list folders");
         assert!(
@@ -65,12 +56,12 @@ mod tests {
             "expected to find created folder"
         );
 
-        let () = himalaya_provider
-            .folders_delete(None, &folder_id)
+        let () = provider
+            .delete_folder(&account, &folder_id)
             .await
             .expect("expected to delete folders");
-        let folders = himalaya_provider
-            .folders_list(None)
+        let folders = provider
+            .list_folders(&account)
             .await
             .expect("expected to list folders");
 

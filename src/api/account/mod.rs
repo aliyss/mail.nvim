@@ -23,7 +23,7 @@ impl Account {
     }
 
     #[must_use]
-    pub fn backends(&self) -> Option<&str> {
+    pub fn backend(&self) -> Option<&str> {
         self.backend.as_deref()
     }
 

@@ -1,41 +1,31 @@
+use anyhow::anyhow;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::expunge::ExpungeFolder;
-use std::convert::Infallible;
 
 use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::folder::commands::Expunge;
-use crate::providers::himalaya::account::himalaya_backend_from_account;
+use crate::api::folder::commands::ExpungeMessages;
 
-impl Expunge for HimalayaProvider {
-    type Error = Infallible;
-
-    /// Purge (expunge) all messages marked as deleted in the specified folder.
+impl ExpungeMessages for HimalayaProvider {
+    /// Remove all messages marked as deleted in the specified folder.
     /// This is equivalent to the "EXPUNGE" command in IMAP.
-    async fn folders_expunge(
-        &self,
-        account: Option<&Account>,
-        folder_id: &str,
-    ) -> Result<(), Self::Error> {
-        let backend = himalaya_backend_from_account(self, account, |builder| {
+    async fn expunge_messages(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account, |builder| {
             builder
                 .without_features()
                 .with_expunge_folder(BackendFeatureSource::Context)
         })
-        .await?;
-
-        backend
-            .expunge_folder(folder_id)
-            .await
-            .expect("failed to expunge folder");
-
-        Ok(())
+        .await?
+        .expunge_folder(folder_id)
+        .await
+        .map_err(|_| anyhow!("failed to expunge folder"))
     }
 }
 
+#[expect(unused_imports)]
 #[cfg(test)]
 mod tests {
-    use tokio;
+    use super::*;
 
     #[tokio::test]
     async fn folders_expunge() {

@@ -1,12 +1,5 @@
-use std::path::PathBuf;
+#![expect(dead_code)]
 
-use crate::api::{
-    config::{
-        Config,
-        ui::view::{UiView, UiViewComponent, UiViewComponentType},
-    },
-    file::TryFile,
-};
 pub mod component;
 pub mod config;
 pub mod default;
@@ -14,6 +7,12 @@ pub mod delete;
 pub mod list;
 pub mod reset;
 pub mod save;
+
+use std::path::PathBuf;
+
+use crate::api::config::Config;
+use crate::api::config::ui::view::{UiView, UiViewComponent, UiViewComponentType};
+use crate::api::file::TryFile;
 
 pub(crate) fn render_ui_view(config_path: Option<PathBuf>) {
     let config = Config::read_from_file(config_path).expect("failed to read config file");

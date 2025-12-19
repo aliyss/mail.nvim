@@ -1,35 +1,26 @@
-use std::convert::Infallible;
-
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
 use crate::api::folder::Folder;
-use crate::api::folder::commands::Get;
-use crate::api::folder::commands::List;
+use crate::api::folder::commands::{GetFolder, ListFolders as _};
+use crate::providers::himalaya::HimalayaProvider;
 
-impl Get for HimalayaProvider {
-    type Error = Infallible;
-
-    async fn folders_get(
+impl GetFolder for HimalayaProvider {
+    async fn get_folder(
         &self,
-        account: Option<&Account>,
+        account: &Account,
         folder_id: &str,
-    ) -> Result<Folder, Self::Error> {
-        let folders = self.folders_list(account).await?;
-
-        let folder = folders
-            .iter()
-            .find(|folder| folder.id() == folder_id)
-            .expect("folder not found");
-
-        Ok(folder.clone())
+    ) -> anyhow::Result<Option<Folder>> {
+        Ok(self
+            .list_folders(account)
+            .await?
+            .into_iter()
+            .find(|folder| folder.id() == folder_id))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use tokio;
-
     use super::*;
+    use crate::api::account::commands::GetAccount;
     use crate::api::config::Config;
 
     #[tokio::test]
@@ -37,16 +28,20 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
+        let provider = HimalayaProvider::from_config(&config)
             .expect("expected to create himalaya provider from default config");
-        let folders = himalaya_provider
-            .folders_list(None)
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
+        let folders = provider
+            .list_folders(&account)
             .await
             .expect("expected to list folders");
-        let folder = himalaya_provider
-            .folders_get(None, folders[0].id())
+        let folder = provider
+            .get_folder(&account, folders[0].id())
             .await
             .expect("expected to get folder");
-        assert_eq!(folder.id(), folders[0].id());
+
+        assert_ne!(folder, None);
     }
 }

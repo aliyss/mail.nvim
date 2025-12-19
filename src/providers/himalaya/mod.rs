@@ -2,13 +2,21 @@ mod account;
 mod envelope;
 mod folder;
 
-use crate::api::config::Config;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use anyhow::anyhow;
 use derive_builder::Builder;
-use pimalaya_tui::himalaya::config::HimalayaTomlConfig;
+use email::account::config::AccountConfig as EmailAccountConfig;
+use email::backend::BackendBuilder as EmailBackendBuilder;
+use email::config::Config as EmailConfig;
+use pimalaya_tui::himalaya::backend::{Backend, BackendBuilder, ContextBuilder};
+use pimalaya_tui::himalaya::config::{HimalayaTomlAccountConfig, HimalayaTomlConfig};
 use pimalaya_tui::terminal::config::TomlConfig as _;
 use serde::{Deserialize, Serialize};
+
+use crate::api::account::Account;
+use crate::api::config::Config;
 
 /// `Email` configuration options.
 #[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
@@ -60,6 +68,48 @@ impl HimalayaProvider {
     #[must_use]
     pub fn config(&self) -> &HimalayaTomlConfig {
         &self.config
+    }
+
+    #[expect(clippy::missing_errors_doc, reason = "todo")]
+    pub fn get_account_config(
+        &self,
+        account: &Account,
+    ) -> Result<(HimalayaTomlAccountConfig, EmailAccountConfig), anyhow::Error> {
+        let (account_name, himalaya_config) = self
+            .config
+            .get_account_config(account.name())
+            .ok_or_else(|| anyhow!("failed to get Himalaya account config"))?;
+
+        let email_config = EmailConfig::from(self.config.clone())
+            .account(account_name)
+            .map_err(|_| anyhow!("failed to get email config"))?;
+
+        Ok((himalaya_config, email_config))
+    }
+
+    #[expect(clippy::missing_errors_doc, reason = "todo")]
+    pub async fn get_backend_from_config<F>(
+        himalaya_config: HimalayaTomlAccountConfig,
+        email_config: EmailAccountConfig,
+        func: F,
+    ) -> anyhow::Result<Backend>
+    where
+        F: Fn(EmailBackendBuilder<ContextBuilder>) -> EmailBackendBuilder<ContextBuilder>,
+    {
+        BackendBuilder::new(Arc::new(himalaya_config), Arc::new(email_config), func)
+            .without_sending_backend()
+            .build()
+            .await
+            .map_err(|_| anyhow!("failed to build backend"))
+    }
+
+    #[expect(clippy::missing_errors_doc, reason = "todo")]
+    pub async fn get_backend<F>(&self, account: &Account, func: F) -> anyhow::Result<Backend>
+    where
+        F: Fn(EmailBackendBuilder<ContextBuilder>) -> EmailBackendBuilder<ContextBuilder>,
+    {
+        let (himalaya_config, email_config) = self.get_account_config(account)?;
+        Self::get_backend_from_config(himalaya_config, email_config, func).await
     }
 }
 

@@ -1,26 +1,14 @@
-use std::convert::Infallible;
-
 use pimalaya_tui::himalaya::config::Accounts;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::account::commands::List;
+use crate::api::account::commands::ListAccounts;
+use crate::providers::himalaya::HimalayaProvider;
 
-impl List for HimalayaProvider {
-    type Error = Infallible;
-
-    fn accounts_list(&self) -> Result<Vec<Account>, Self::Error> {
-        let accounts = Accounts::from(self.config.accounts.iter());
-
-        Ok(accounts
+impl ListAccounts for HimalayaProvider {
+    fn list_accounts(&self) -> anyhow::Result<Vec<Account>> {
+        Ok(Accounts::from(self.config.accounts.iter())
             .iter()
-            .map(|account| {
-                Account::new(
-                    account.name.clone(),
-                    Some(account.backend.clone()),
-                    account.default,
-                )
-            })
+            .map(|a| Account::new(a.name.clone(), Some(a.backend.clone()), a.default))
             .collect())
     }
 }
@@ -31,15 +19,15 @@ mod tests {
     use crate::api::config::Config;
 
     #[test]
-    fn accounts_list() {
+    fn list_accounts() {
         let config = Config::builder()
             .build()
-            .expect("Expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
-            .expect("Expected to create himalaya provider from default config");
-        let accounts = himalaya_provider
-            .accounts_list()
-            .expect("Expected to list accounts");
+            .expect("failed to build default config");
+        let provider = HimalayaProvider::from_config(&config)
+            .expect("failed to create Himalaya provider from default config");
+
+        let accounts = provider.list_accounts().expect("failed to list accounts");
+
         assert!(!accounts.is_empty(), "Expected at least one account");
     }
 }

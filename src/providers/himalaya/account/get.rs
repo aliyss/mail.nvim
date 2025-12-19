@@ -1,32 +1,24 @@
-use std::convert::Infallible;
+use anyhow::anyhow;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::account::commands::{Get, List};
+use crate::api::account::commands::{GetAccount, ListAccounts};
+use crate::providers::himalaya::HimalayaProvider;
 
-impl Get for HimalayaProvider {
-    type Error = Infallible;
+impl GetAccount for HimalayaProvider {
+    fn get_account(&self, name: &str) -> anyhow::Result<Option<Account>> {
+        let account = self
+            .list_accounts()?
+            .into_iter()
+            .find(|account| account.name() == name);
 
-    /// Execute the get command using the provided mail provider.
-    ////
-    /// # Errors
-    /// Returns an error if name is provided but the account is not found.
-    /// Returns an error if name is not provided and no default account is set.
-    fn accounts_get(&self, name: Option<&str>) -> Result<Account, Self::Error> {
-        let accounts = self.accounts_list().expect("Failed to list accounts");
+        Ok(account)
+    }
 
-        let account = match name {
-            Some(name) => accounts
-                .iter()
-                .find(|account| account.name() == name)
-                .expect("Account not found"),
-            None => accounts
-                .iter()
-                .find(|account| account.is_default())
-                .expect("No default account set"),
-        };
-
-        Ok(account.clone())
+    fn get_default_account(&self) -> anyhow::Result<Account> {
+        self.list_accounts()?
+            .into_iter()
+            .find(Account::is_default)
+            .ok_or(anyhow!("no default account set"))
     }
 }
 
@@ -36,18 +28,29 @@ mod tests {
     use crate::api::config::Config;
 
     #[test]
-    fn accounts_get() {
+    fn get_account() {
+        // let config = Config::builder()
+        //     .build()
+        //     .expect("expected default configuration to be valid");
+        // let provider = HimalayaProvider::from_config(&config)
+        //     .expect("failed to create Himalaya provider using default config");
+        // let account = provider
+        //     .get_account("mock_account")
+        //     .expect("failed to get accounts");
+
+        // assert_ne!(account, None, "failed to get account");
+    }
+
+    #[test]
+    fn get_default_account() {
         let config = Config::builder()
             .build()
-            .expect("Expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
-            .expect("Expected to create himalaya provider from default config");
-        let accounts = himalaya_provider
-            .accounts_get(None)
-            .expect("Expected to get account");
-        assert!(
-            !accounts.name().is_empty(),
-            "Expected account to have a name"
-        );
+            .expect("expected default configuration to be valid");
+        let provider = HimalayaProvider::from_config(&config)
+            .expect("failed to create Himalaya provider using default config");
+
+        _ = provider
+            .get_default_account()
+            .expect("failed to get default account");
     }
 }

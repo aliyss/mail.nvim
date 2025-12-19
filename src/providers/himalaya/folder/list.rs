@@ -1,23 +1,21 @@
-use email::{backend::feature::BackendFeatureSource, folder::list::ListFolders};
+use email::backend::feature::BackendFeatureSource;
+use email::folder::list::ListFolders as _;
 use pimalaya_tui::himalaya::config::Folders as HimalayaFolders;
-use std::convert::Infallible;
 
 use super::super::HimalayaProvider;
 use crate::api::account::Account;
 use crate::api::folder::Folder;
-use crate::api::folder::commands::List;
-use crate::providers::himalaya::account::himalaya_backend_from_account;
+use crate::api::folder::commands::ListFolders;
 
-impl List for HimalayaProvider {
-    type Error = Infallible;
-
-    async fn folders_list(&self, account: Option<&Account>) -> Result<Vec<Folder>, Self::Error> {
-        let backend = himalaya_backend_from_account(self, account, |builder| {
-            builder
-                .without_features()
-                .with_list_folders(BackendFeatureSource::Context)
-        })
-        .await?;
+impl ListFolders for HimalayaProvider {
+    async fn list_folders(&self, account: &Account) -> anyhow::Result<Vec<Folder>> {
+        let backend = self
+            .get_backend(account, |builder| {
+                builder
+                    .without_features()
+                    .with_list_folders(BackendFeatureSource::Context)
+            })
+            .await?;
 
         let folders = HimalayaFolders::from(
             backend
@@ -32,9 +30,8 @@ impl List for HimalayaProvider {
 
 #[cfg(test)]
 mod tests {
-    use tokio;
-
     use super::*;
+    use crate::api::account::commands::GetAccount as _;
     use crate::api::config::Config;
 
     #[tokio::test]
@@ -42,12 +39,16 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
+        let provider = HimalayaProvider::from_config(&config)
             .expect("expected to create himalaya provider from default config");
-        let folders = himalaya_provider
-            .folders_list(None)
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
+        let folders = provider
+            .list_folders(&account)
             .await
             .expect("expected to list folders");
-        assert!(!folders.is_empty(), "expected at least one folder");
+
+        assert!(!folders.is_empty());
     }
 }

@@ -1,26 +1,19 @@
-use crate::providers::himalaya::account::himalaya_backend_from_account;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::add::AddFolder;
-use std::convert::Infallible;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::folder::commands::Create;
+use crate::api::folder::commands::CreateFolder;
+use crate::providers::himalaya::HimalayaProvider;
 
-impl Create for HimalayaProvider {
-    type Error = Infallible;
-
-    async fn folders_create(
-        &self,
-        account: Option<&Account>,
-        folder_name: &str,
-    ) -> Result<(), Self::Error> {
-        let backend = himalaya_backend_from_account(self, account, |builder| {
-            builder
-                .without_features()
-                .with_add_folder(BackendFeatureSource::Context)
-        })
-        .await?;
+impl CreateFolder for HimalayaProvider {
+    async fn create_folder(&self, account: &Account, folder_name: &str) -> anyhow::Result<()> {
+        let backend = self
+            .get_backend(account, |builder| {
+                builder
+                    .without_features()
+                    .with_add_folder(BackendFeatureSource::Context)
+            })
+            .await?;
 
         backend
             .add_folder(folder_name)

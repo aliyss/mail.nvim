@@ -1,35 +1,24 @@
+use anyhow::anyhow;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::purge::PurgeFolder;
-use std::convert::Infallible;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
-use crate::api::folder::commands::Purge;
-use crate::providers::himalaya::account::himalaya_backend_from_account;
+use crate::api::folder::commands::PurgeMessages;
+use crate::providers::himalaya::HimalayaProvider;
 
-impl Purge for HimalayaProvider {
-    type Error = Infallible;
-
+impl PurgeMessages for HimalayaProvider {
     /// Purge all messages in the specified folder, regardless of their flags.
     /// This is a more aggressive operation than expunge.
-    async fn folders_purge(
-        &self,
-        account: Option<&Account>,
-        folder_id: &str,
-    ) -> Result<(), Self::Error> {
-        let backend = himalaya_backend_from_account(self, account, |builder| {
+    async fn purge_messages(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account, |builder| {
             builder
                 .without_features()
                 .with_purge_folder(BackendFeatureSource::Context)
         })
-        .await?;
-
-        backend
-            .purge_folder(folder_id)
-            .await
-            .expect("failed to purge folder");
-
-        Ok(())
+        .await?
+        .purge_folder(folder_id)
+        .await
+        .map_err(|_| anyhow!("failed to purge folder"))
     }
 }
 

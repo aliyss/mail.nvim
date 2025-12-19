@@ -1,30 +1,23 @@
 use email::backend::feature::BackendFeatureSource;
 use email::envelope::list::ListEnvelopesOptions as EmailListEnvelopeOptions;
-use std::convert::Infallible;
 
-use super::super::HimalayaProvider;
 use crate::api::account::Account;
 use crate::api::envelope::Envelope;
 use crate::api::envelope::arguments::EnvelopeListArguments;
-use crate::api::envelope::commands::List;
-use crate::providers::himalaya::account::{
-    himalaya_account_config_from_account, himalaya_backend_from_account_config,
-};
+use crate::api::envelope::commands::ListEnvelopes;
+use crate::providers::himalaya::HimalayaProvider;
 
-impl List for HimalayaProvider {
-    type Error = Infallible;
-
-    async fn envelopes_list(
+impl ListEnvelopes for HimalayaProvider {
+    async fn list_envelopes(
         &self,
-        account: Option<&Account>,
+        account: &Account,
         folder_id: Option<&str>,
         options: Option<EnvelopeListArguments>,
-    ) -> Result<Vec<Envelope>, Self::Error> {
-        let (himalaya_account_config, email_account_config) =
-            himalaya_account_config_from_account(self, account)?;
+    ) -> anyhow::Result<Vec<Envelope>> {
+        let (himalaya_account_config, email_account_config) = self.get_account_config(account)?;
 
         let envelope_folder_id = match folder_id {
-            Some(id) => id.to_string(),
+            Some(id) => id.to_owned(),
             None => email_account_config.get_inbox_folder_alias(),
         };
 
@@ -33,7 +26,7 @@ impl List for HimalayaProvider {
         let per_page = envelope_options
             .per_page_or_default(Some(|| email_account_config.get_envelope_list_page_size()));
 
-        let backend = himalaya_backend_from_account_config(
+        let backend = Self::get_backend_from_config(
             himalaya_account_config,
             email_account_config,
             |builder| {
@@ -64,9 +57,8 @@ impl List for HimalayaProvider {
 
 #[cfg(test)]
 mod tests {
-    use tokio;
-
     use super::*;
+    use crate::api::account::commands::GetAccount;
     use crate::api::config::Config;
 
     #[tokio::test]
@@ -74,13 +66,17 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
+        let provider = HimalayaProvider::from_config(&config)
             .expect("expected to create himalaya provider from default config");
-        let envelopes = himalaya_provider
-            .envelopes_list(None, None, None)
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
+        let envelopes = provider
+            .list_envelopes(&account, None, None)
             .await
             .expect("expected to list envelopes");
-        assert!(!envelopes.is_empty(), "expected at least one folder");
+
+        assert!(!envelopes.is_empty());
     }
 
     #[tokio::test]
@@ -88,16 +84,20 @@ mod tests {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
-        let himalaya_provider = HimalayaProvider::from_config(&config)
+        let provider = HimalayaProvider::from_config(&config)
             .expect("expected to create himalaya provider from default config");
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
         let options = EnvelopeListArguments::new(
             Some(1), // page
             Some(1), // per_page
         );
-        let envelopes = himalaya_provider
-            .envelopes_list(None, None, Some(options))
+        let envelopes = provider
+            .list_envelopes(&account, None, Some(options))
             .await
             .expect("expected to list envelopes");
+
         assert!(envelopes.len() <= 1, "expected at most one envelope");
     }
 }

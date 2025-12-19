@@ -4,4 +4,7 @@ pub mod envelope;
 pub mod file;
 pub mod folder;
 pub mod help;
-pub mod prelude;
+
+pub mod prelude {
+    pub use crate::api::config::Format;
+}
