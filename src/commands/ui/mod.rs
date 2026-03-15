@@ -2,7 +2,7 @@ mod close;
 mod open;
 mod refresh;
 mod toggle;
-mod view;
+pub mod view;
 
 pub use close::Close;
 pub use open::Open;

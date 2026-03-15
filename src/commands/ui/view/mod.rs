@@ -3,6 +3,7 @@ pub mod config;
 pub mod default;
 pub mod delete;
 pub mod list;
+pub mod render;
 pub mod reset;
 pub mod save;
 
@@ -15,6 +16,7 @@ use crate::api::account::commands::ListAccounts;
 use crate::api::config::Config;
 use crate::api::config::ui::view::{UiView, UiViewComponent, UiViewComponentType};
 use crate::api::file::TryFile;
+use crate::commands::ui::view::render::Table;
 use crate::providers::himalaya::HimalayaProvider;
 
 pub(crate) fn render_ui_view(buffer: &mut Buffer, config_path: Option<PathBuf>) {
@@ -83,14 +85,7 @@ fn render_table(component: &UiViewComponent, config: &Config, buffer: &mut Buffe
             match component.context.command_type.as_str() {
                 "List" => {
                     let accounts = provider.list_accounts().expect("failed to list accounts");
-                    let mut lines: Vec<String> = Vec::new();
-                    for account in accounts {
-                        let line = format!("Account: {}", account.name());
-                        lines.push(line);
-                    }
-
-                    // TODO: Needs to be adjusted to insert at correct position...
-                    if let Err(_err) = buffer.set_lines(.., false, lines) {}
+                    let _ = Table::new(accounts).render(buffer);
                 } // Handled below
                 _ => unimplemented!(
                     "Table rendering for Account action {} not implemented yet",
