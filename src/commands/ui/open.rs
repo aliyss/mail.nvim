@@ -1,7 +1,10 @@
 use nvim::Object;
 
 use super::{get_drawer_buffer, render};
-use crate::commands::{prelude::*, ui::view::render_ui_view};
+use crate::{
+    commands::prelude::*,
+    utils::render::{ASYNC_RUNTIME, render_ui_view_from_config},
+};
 
 pub struct Open;
 
@@ -73,6 +76,8 @@ impl UserCommand for Open {
         }
 
         render(&mut buffer);
-        render_ui_view(&mut buffer, None);
+        ASYNC_RUNTIME.block_on(async move {
+            render_ui_view_from_config(&mut buffer, None).await;
+        });
     }
 }

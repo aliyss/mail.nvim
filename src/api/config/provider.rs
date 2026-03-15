@@ -14,6 +14,9 @@ pub enum MailProviderType {
 #[derive(Debug, Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
 #[builder(setter(strip_option))]
 pub struct MailProvider {
+    #[builder(setter(into), default = "self.mail_provider_id_default()")]
+    pub id: String,
+
     /// Location of the setting to be set to.
     #[builder(default = "self.mail_provider_location_default()?")]
     pub location: PathBuf,
@@ -36,6 +39,14 @@ impl MailProvider {
 }
 
 impl MailProviderBuilder {
+    fn mail_provider_id_default(&self) -> String {
+        let id = match self.provider_type {
+            MailProviderType::Himalaya => "himalaya",
+        };
+
+        id.to_string()
+    }
+
     fn mail_provider_location_default(&self) -> Result<PathBuf, String> {
         let project_dirs = match self.provider_type {
             MailProviderType::Himalaya => ProjectDirs::from("com", "pimalaya", "himalaya"),

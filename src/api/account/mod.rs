@@ -1,5 +1,5 @@
 pub mod commands;
-use crate::commands::ui::view::render::{RenderTable, RowBuilder};
+use crate::utils::render::table::{RenderTable, RowBuilder};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Account {
@@ -61,5 +61,38 @@ impl RenderTable for Vec<Account> {
                     })
             })
             .collect()
+    }
+
+    fn from_headers_and_rows(headers: Vec<String>, rows: Vec<RowBuilder>) -> Self {
+        let mut accounts: Vec<Account> = Vec::new();
+        let Some(name_index) = headers.iter().position(|h| h == "Name") else {
+            return accounts;
+        };
+        let backend_index = headers.iter().position(|h| h == "Backend");
+        let default_index = headers.iter().position(|h| h == "Default");
+        for row in rows {
+            let cells = row.cells;
+            let name = match cells.get(name_index) {
+                Some(cell) => cell.clone(),
+                None => continue, // Skip rows without a name cell
+            };
+
+            let backend = if let Some(backend_index) = backend_index {
+                cells.get(backend_index).cloned()
+            } else {
+                None
+            };
+
+            let default = if let Some(default_index) = default_index {
+                cells
+                    .get(default_index)
+                    .is_some_and(|cell| cell.to_lowercase() == "yes")
+            } else {
+                false
+            };
+
+            accounts.push(Account::new(name, backend, default));
+        }
+        accounts
     }
 }

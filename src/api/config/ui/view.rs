@@ -16,7 +16,8 @@ pub struct UiViewComponent {
     pub name: String,
     pub component_type: UiViewComponentType,
     pub context: UiViewComponentContext,
-    pub layout: UiViewComponentLayout,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layout: Option<UiViewComponentLayout>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -89,13 +90,13 @@ mod tests {
                 arguments,
                 context,
             },
-            layout: UiViewComponentLayout {
+            layout: Some(UiViewComponentLayout {
                 position: "left".into(),
                 content_scrollable: (true, true),
                 location: (0, 0),
                 size: (30, Some(10)),
                 size_as_percentage: true,
-            },
+            }),
         };
         assert_eq!(component.name, "Account List");
         assert_eq!(component.component_type, UiViewComponentType::Drawer);
@@ -119,13 +120,13 @@ mod tests {
                         arguments: HashMap::new(),
                         context: HashMap::new(),
                     },
-                    layout: UiViewComponentLayout {
+                    layout: Some(UiViewComponentLayout {
                         position: "left".into(),
                         content_scrollable: (true, false),
                         location: (0, 0),
                         size: (30, None),
                         size_as_percentage: true,
-                    },
+                    }),
                 },
                 UiViewComponent {
                     id: "table".into(),
@@ -137,13 +138,13 @@ mod tests {
                         arguments: HashMap::new(),
                         context: HashMap::new(),
                     },
-                    layout: UiViewComponentLayout {
+                    layout: Some(UiViewComponentLayout {
                         position: "right".into(),
                         content_scrollable: (true, true),
                         location: (30, 0),
                         size: (70, None),
                         size_as_percentage: true,
-                    },
+                    }),
                 },
             ],
         };

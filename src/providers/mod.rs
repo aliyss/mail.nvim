@@ -6,10 +6,10 @@ use crate::api::{
 pub mod himalaya;
 
 pub trait Provider:
-    GetAccount + GetFolder + ListAccounts + ListFolders + DeleteFolder + CreateFolder
+    GetAccount + GetFolder + ListAccounts + ListFolders + DeleteFolder + CreateFolder + Clone
 {
 }
-impl<T: GetAccount + GetFolder + ListAccounts + ListFolders + DeleteFolder + CreateFolder> Provider
-    for T
+impl<T: GetAccount + GetFolder + ListAccounts + ListFolders + DeleteFolder + CreateFolder + Clone>
+    Provider for T
 {
 }

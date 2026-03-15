@@ -14,11 +14,11 @@ use crate::{
     utils::render::{ASYNC_RUNTIME, render_ui_view_from_component},
 };
 
-pub struct AccountList;
+pub struct FolderList;
 
-impl UserCommand for AccountList {
-    const NAME: Name = Name::new("MailAccountList");
-    const DESCRIPTION: &'static str = "List all configured mail accounts";
+impl UserCommand for FolderList {
+    const NAME: Name = Name::new("MailFolderList");
+    const DESCRIPTION: &'static str = "List all folders in a mail account";
 
     fn callback(_: CommandArgs) {
         let current_buffer = api::get_current_buf();
@@ -51,11 +51,8 @@ impl UserCommand for AccountList {
             }
         }
 
-        let keymaps: [(Mode, &'static str, &'static str); 3] = [
-            (Mode::Normal, "q", ":bdelete<CR>"),
-            (Mode::Normal, "i", ":MailFolderList<CR>"),
-            (Mode::Normal, "<CR>", ":MailFolderList<CR>"),
-        ];
+        let keymaps: [(Mode, &'static str, &'static str); 1] =
+            [(Mode::Normal, "q", ":bdelete<CR>")];
 
         let opts = SetKeymapOpts::builder().silent(true).build();
 
@@ -65,18 +62,20 @@ impl UserCommand for AccountList {
             }
         }
 
-        let config = Config::read_from_file(None).expect("failed to read config file");
+        let config = Config::read_from_file(None)
+            .expect("failed to read config file")
+            .clone();
 
         ASYNC_RUNTIME.block_on(async move {
             render_ui_view_from_component(
                 buffer,
                 Some(current_buffer),
                 UiViewComponent {
-                    id: "command-account-list".into(),
-                    name: "AccountList".into(),
+                    id: "command-folder-list".into(),
+                    name: "FolderList".into(),
                     component_type: UiViewComponentType::Table,
                     context: UiViewComponentContext {
-                        command_group: "Account".into(),
+                        command_group: "Folder".into(),
                         command_type: "List".into(),
                         arguments: HashMap::new(),
                         context: HashMap::new(),
