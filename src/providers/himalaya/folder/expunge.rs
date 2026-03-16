@@ -3,14 +3,13 @@ use email::backend::feature::BackendFeatureSource;
 use email::folder::expunge::ExpungeFolder;
 
 use super::super::HimalayaProvider;
-use crate::api::account::Account;
 use crate::api::folder::commands::ExpungeMessages;
 
 impl ExpungeMessages for HimalayaProvider {
     /// Remove all messages marked as deleted in the specified folder.
     /// This is equivalent to the "EXPUNGE" command in IMAP.
-    async fn expunge_messages(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
-        self.get_backend(account, |builder| {
+    async fn expunge_messages(&self, account_id: &str, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account_id, |builder| {
             builder
                 .without_features()
                 .with_expunge_folder(BackendFeatureSource::Context)

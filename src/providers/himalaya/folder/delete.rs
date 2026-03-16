@@ -2,13 +2,12 @@ use anyhow::anyhow;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::delete::DeleteFolder as _;
 
-use crate::api::account::Account;
 use crate::api::folder::commands::DeleteFolder;
 use crate::providers::himalaya::HimalayaProvider;
 
 impl DeleteFolder for HimalayaProvider {
-    async fn delete_folder(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
-        self.get_backend(account, |builder| {
+    async fn delete_folder(&self, account_id: &str, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account_id, |builder| {
             builder
                 .without_features()
                 .with_delete_folder(BackendFeatureSource::Context)
@@ -46,11 +45,11 @@ mod tests {
         let folder_id = format!("{MAIL_ORGANIZATION}-{MAIL_APPLICATION}");
 
         provider
-            .create_folder(&account, &folder_id)
+            .create_folder(account.name(), &folder_id)
             .await
             .expect("expected to create folders");
         let folders = provider
-            .list_folders(&account)
+            .list_folders(account.name())
             .await
             .expect("expected to list folders");
         assert!(
@@ -59,11 +58,11 @@ mod tests {
         );
 
         let () = provider
-            .delete_folder(&account, &folder_id)
+            .delete_folder(account.name(), &folder_id)
             .await
             .expect("expected to delete folders");
         let folders = provider
-            .list_folders(&account)
+            .list_folders(account.name())
             .await
             .expect("expected to list folders");
 

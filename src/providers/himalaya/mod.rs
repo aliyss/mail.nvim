@@ -15,7 +15,6 @@ use pimalaya_tui::himalaya::config::{HimalayaTomlAccountConfig, HimalayaTomlConf
 use pimalaya_tui::terminal::config::TomlConfig as _;
 use serde::{Deserialize, Serialize};
 
-use crate::api::account::Account;
 use crate::api::config::Config;
 
 /// `Email` configuration options.
@@ -73,15 +72,15 @@ impl HimalayaProvider {
     #[expect(clippy::missing_errors_doc, reason = "todo")]
     pub fn get_account_config(
         &self,
-        account: &Account,
+        account_name: &str,
     ) -> Result<(HimalayaTomlAccountConfig, EmailAccountConfig), anyhow::Error> {
-        let (account_name, himalaya_config) = self
+        let (account_info_name, himalaya_config) = self
             .config
-            .get_account_config(account.name())
+            .get_account_config(account_name)
             .ok_or_else(|| anyhow!("failed to get Himalaya account config"))?;
 
         let email_config = EmailConfig::from(self.config.clone())
-            .account(account_name)
+            .account(account_info_name)
             .map_err(|_| anyhow!("failed to get email config"))?;
 
         Ok((himalaya_config, email_config))
@@ -104,11 +103,11 @@ impl HimalayaProvider {
     }
 
     #[expect(clippy::missing_errors_doc, reason = "todo")]
-    pub async fn get_backend<F>(&self, account: &Account, func: F) -> anyhow::Result<Backend>
+    pub async fn get_backend<F>(&self, account_name: &str, func: F) -> anyhow::Result<Backend>
     where
         F: Fn(EmailBackendBuilder<ContextBuilder>) -> EmailBackendBuilder<ContextBuilder>,
     {
-        let (himalaya_config, email_config) = self.get_account_config(account)?;
+        let (himalaya_config, email_config) = self.get_account_config(account_name)?;
         Self::get_backend_from_config(himalaya_config, email_config, func).await
     }
 }

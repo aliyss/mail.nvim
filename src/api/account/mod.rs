@@ -1,5 +1,6 @@
+use crate::utils::render::table::render::{RenderTable, RowBuilder};
+
 pub mod commands;
-use crate::utils::render::table::{RenderTable, RowBuilder};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Account {
@@ -35,6 +36,8 @@ impl Account {
 }
 
 impl RenderTable for Vec<Account> {
+    type Item = Account;
+
     fn headers(&self) -> Vec<String> {
         vec![
             "Name".to_string(),

@@ -1,8 +1,13 @@
+use std::{fmt::Debug, ops::Deref};
+
+use anyhow::Ok;
 use nvim_oxi::api::Buffer;
 
-use crate::utils::buffer::name::CommandBufferData;
+use crate::utils::buffer::render::{FromBuffer, ToBuffer};
 
-pub trait RenderTable {
+pub trait RenderTable: Deref<Target = [Self::Item]> + Debug {
+    type Item;
+
     fn headers(&self) -> Vec<String>;
     fn rows(&self) -> Vec<RowBuilder>;
     fn from_headers_and_rows(headers: Vec<String>, rows: Vec<RowBuilder>) -> Self;
@@ -33,23 +38,23 @@ impl RowBuilder {
 }
 
 pub struct Table<T: RenderTable> {
-    data: T,
+    pub data: T,
+    pub offset: usize,
 }
 
 impl<T: RenderTable> Table<T> {
     pub fn new(data: T) -> Self {
-        Self { data }
+        Self { data, offset: 0 }
     }
+}
 
-    pub fn from_buffer_lines(
-        command_buffer_data: &CommandBufferData,
-        buffer: &mut Buffer,
-    ) -> Result<Option<T>, ()> {
-        let line_offset = command_buffer_data.line_count + 1;
+impl<T: RenderTable> FromBuffer for Table<T> {
+    fn from_buffer(buffer: &Buffer, metadata_offset: Option<usize>) -> anyhow::Result<Self> {
+        let mut line_offset = metadata_offset.unwrap_or(0);
 
         let lines: Vec<String> = buffer
             .get_lines(line_offset.., true)
-            .map_err(|_| ())?
+            .map_err(|_| anyhow::anyhow!("failed to read lines from buffer"))?
             .map(|nvim_str| nvim_str.to_string())
             .collect();
 
@@ -58,6 +63,7 @@ impl<T: RenderTable> Table<T> {
         for line in lines {
             // If the line contains the intersection character or is just dashes, skip it.
             if line.contains('┼') || line.chars().all(|c| c == '─' || c == ' ' || c == '┼') {
+                line_offset += 1; // Skip the separator line and move to the next line
                 continue;
             }
 
@@ -72,20 +78,29 @@ impl<T: RenderTable> Table<T> {
             }
 
             if headers.is_empty() {
+                line_offset += 1;
                 headers = cells;
             } else {
                 rows.push(RowBuilder { cells });
             }
         }
-        let table_data = T::from_headers_and_rows(headers, rows);
-        Ok(Some(table_data))
-    }
 
-    pub fn render(self, buffer: &mut Buffer) -> nvim_oxi::Result<()> {
+        let table_data = T::from_headers_and_rows(headers, rows);
+
+        Ok(Self {
+            data: table_data,
+            offset: line_offset,
+        })
+    }
+}
+
+impl<T: RenderTable> ToBuffer for Table<T> {
+    fn to_buffer(mut self, buffer: &mut Buffer, line_offset: usize) -> anyhow::Result<Self> {
         let mut data: Vec<Vec<String>> = Vec::new();
         let headers = self.data.headers();
         let has_headers = !headers.is_empty();
         if has_headers {
+            self.offset += 1;
             data.push(headers);
         }
 
@@ -94,7 +109,7 @@ impl<T: RenderTable> Table<T> {
         }
 
         if data.is_empty() {
-            return Ok(());
+            return Ok(self);
         }
 
         let num_columns = data.iter().map(std::vec::Vec::len).max().unwrap_or(0);
@@ -122,11 +137,13 @@ impl<T: RenderTable> Table<T> {
                     .map(|&w| "─".repeat(w))
                     .collect::<Vec<_>>()
                     .join("─┼─");
+
+                self.offset += 1;
                 lines.push(separator);
             }
         }
 
-        buffer.set_lines(0.., true, lines)?;
-        Ok(())
+        buffer.set_lines(line_offset..line_offset, true, lines)?;
+        Ok(self)
     }
 }

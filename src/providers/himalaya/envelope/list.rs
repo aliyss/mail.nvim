@@ -1,7 +1,6 @@
 use email::backend::feature::BackendFeatureSource;
 use email::envelope::list::ListEnvelopesOptions as EmailListEnvelopeOptions;
 
-use crate::api::account::Account;
 use crate::api::envelope::Envelope;
 use crate::api::envelope::arguments::EnvelopeListArguments;
 use crate::api::envelope::commands::ListEnvelopes;
@@ -10,11 +9,12 @@ use crate::providers::himalaya::HimalayaProvider;
 impl ListEnvelopes for HimalayaProvider {
     async fn list_envelopes(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: Option<&str>,
         options: Option<EnvelopeListArguments>,
     ) -> anyhow::Result<Vec<Envelope>> {
-        let (himalaya_account_config, email_account_config) = self.get_account_config(account)?;
+        let (himalaya_account_config, email_account_config) =
+            self.get_account_config(account_id)?;
 
         let envelope_folder_id = match folder_id {
             Some(id) => id.to_owned(),
@@ -72,7 +72,7 @@ mod tests {
             .get_default_account()
             .expect("failed to get default account");
         let envelopes = provider
-            .list_envelopes(&account, None, None)
+            .list_envelopes(account.name(), None, None)
             .await
             .expect("expected to list envelopes");
 
@@ -94,7 +94,7 @@ mod tests {
             Some(1), // per_page
         );
         let envelopes = provider
-            .list_envelopes(&account, None, Some(options))
+            .list_envelopes(account.name(), None, Some(options))
             .await
             .expect("expected to list envelopes");
 

@@ -1,6 +1,7 @@
-use std::collections::HashMap;
-
-use nvim_oxi::Object;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     api::{
@@ -11,8 +12,10 @@ use crate::{
         file::TryFile,
     },
     commands::prelude::*,
-    utils::render::{ASYNC_RUNTIME, render_ui_view_from_component},
+    utils::render::{ASYNC_RUNTIME, get_context, get_data, render},
 };
+
+use nvim_oxi::libuv::AsyncHandle;
 
 pub struct AccountList;
 
@@ -20,72 +23,64 @@ impl UserCommand for AccountList {
     const NAME: Name = Name::new("MailAccountList");
     const DESCRIPTION: &'static str = "List all configured mail accounts";
 
+    fn default_view_component() -> Option<UiViewComponent> {
+        Some(UiViewComponent {
+            id: "command-account-list".into(),
+            name: "AccountList".into(),
+            component_type: UiViewComponentType::Table,
+            context: UiViewComponentContext {
+                command_group: "Account".into(),
+                command_type: "List".into(),
+                arguments: HashMap::new(),
+                context: Vec::new(),
+            },
+            layout: None,
+        })
+    }
+
     fn callback(_: CommandArgs) {
         let current_buffer = api::get_current_buf();
 
-        let in_buffer_list = false;
-        let is_temporary = true;
-        let mut buffer = match api::create_buf(in_buffer_list, is_temporary) {
-            Ok(buffer) => buffer,
-            Err(err) => bail!("failed to create buffer: {err}"),
-        };
-
-        if let Err(err) = api::set_current_buf(&buffer) {
-            bail!("failed to set current buffer: {err}");
-        }
-
-        let options: [(&'static str, Object); 3] = [
-            // Allows users to use `ftplugin` to customize the buffer.
-            ("filetype", Object::from("mail-table")),
-            // Prevents users from saving the file.
-            ("buftype", Object::from("nofile")),
-            // Prevents users from entering INSERT mode.
-            ("modifiable", Object::from(false)),
-        ];
-
-        let opts = OptionOpts::builder().scope(OptionScope::Local).build();
-
-        for (name, value) in options {
-            if let Err(err) = api::set_option_value(name, value, &opts) {
-                bail!("failed to set option value: {err}");
-            }
-        }
-
-        let keymaps: [(Mode, &'static str, &'static str); 3] = [
-            (Mode::Normal, "q", ":bdelete<CR>"),
-            (Mode::Normal, "i", ":MailFolderList<CR>"),
-            (Mode::Normal, "<CR>", ":MailFolderList<CR>"),
-        ];
-
-        let opts = SetKeymapOpts::builder().silent(true).build();
-
-        for (mode, keys, command) in keymaps {
-            if let Err(err) = buffer.set_keymap(mode, keys, command, &opts) {
-                bail!("failed to set keymap: {err}");
-            }
-        }
-
         let config = Config::read_from_file(None).expect("failed to read config file");
 
-        ASYNC_RUNTIME.block_on(async move {
-            render_ui_view_from_component(
-                buffer,
-                Some(current_buffer),
-                UiViewComponent {
-                    id: "command-account-list".into(),
-                    name: "AccountList".into(),
-                    component_type: UiViewComponentType::Table,
-                    context: UiViewComponentContext {
-                        command_group: "Account".into(),
-                        command_type: "List".into(),
-                        arguments: HashMap::new(),
-                        context: HashMap::new(),
-                    },
-                    layout: None,
-                },
-                config,
-            )
-            .await;
+        let mut view_component =
+            Self::default_view_component().expect("expected default view component to be defined");
+
+        let context = match get_context(Some(current_buffer), &view_component) {
+            Ok(context) => context,
+            Err(err) => bail!("failed to get context: {err}"),
+        };
+
+        view_component.context.context = context;
+
+        let shared_component = Arc::new(Mutex::new(view_component.clone()));
+
+        let shared_data = Arc::new(Mutex::new(None));
+        let shared_data_for_async = Arc::clone(&shared_data);
+
+        let async_handle = AsyncHandle::new(move || {
+            // This runs on the MAIN THREAD after .send() is called
+            let mut lock = shared_data.lock().unwrap();
+            if let Some(data) = lock.take() {
+                let component_for_schedule = Arc::clone(&shared_component);
+                nvim_oxi::schedule(move |()| {
+                    let component_info = component_for_schedule.lock().unwrap();
+                    let _ = render(&component_info, data);
+                });
+            }
+        })
+        .expect("failed to create async handle");
+
+        ASYNC_RUNTIME.spawn(async move {
+            if let Ok(data) = get_data(&view_component, &config).await {
+                // Put data in the mailbox
+                *shared_data_for_async.lock().unwrap() = Some(data);
+
+                // 4. Ping Neovim to tell it "Data is ready!"
+                let () = async_handle
+                    .send()
+                    .expect("failed to send async notification to Neovim");
+            }
         });
     }
 }

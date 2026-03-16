@@ -1,4 +1,3 @@
-use crate::api::account::Account;
 use crate::api::folder::Folder;
 use crate::api::folder::commands::{GetFolder, ListFolders as _};
 use crate::providers::himalaya::HimalayaProvider;
@@ -6,11 +5,11 @@ use crate::providers::himalaya::HimalayaProvider;
 impl GetFolder for HimalayaProvider {
     async fn get_folder(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: &str,
     ) -> anyhow::Result<Option<Folder>> {
         Ok(self
-            .list_folders(account)
+            .list_folders(account_id)
             .await?
             .into_iter()
             .find(|folder| folder.id() == folder_id))
@@ -34,11 +33,11 @@ mod tests {
             .get_default_account()
             .expect("failed to get default account");
         let folders = provider
-            .list_folders(&account)
+            .list_folders(account.name())
             .await
             .expect("expected to list folders");
         let folder = provider
-            .get_folder(&account, folders[0].id())
+            .get_folder(account.name(), folders[0].id())
             .await
             .expect("expected to get folder");
 

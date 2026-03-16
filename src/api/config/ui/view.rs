@@ -21,11 +21,86 @@ pub struct UiViewComponent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UiViewComponentContextContext {
+    #[serde(rename = "account_id")]
+    AccountId(String),
+    #[serde(rename = "folder_id")]
+    FolderId(String),
+    #[serde(rename = "email_id")]
+    EmailId(String),
+}
+
+impl UiViewComponentContextContext {
+    #[must_use]
+    pub fn to_id(id: &str, value: String) -> Option<Self> {
+        if id == "account_id" {
+            return Some(UiViewComponentContextContext::AccountId(value));
+        } else if id == "folder_id" {
+            return Some(UiViewComponentContextContext::FolderId(value));
+        } else if id == "email_id" {
+            return Some(UiViewComponentContextContext::EmailId(value));
+        }
+        None
+    }
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::AccountId(id) | Self::FolderId(id) | Self::EmailId(id) => id.as_str(),
+        }
+    }
+    #[must_use]
+    pub fn context_type(&self) -> &str {
+        match self {
+            Self::AccountId(_) => "account_id",
+            Self::FolderId(_) => "folder_id",
+            Self::EmailId(_) => "email_id",
+        }
+    }
+}
+
+impl From<&UiViewComponentContextContext> for String {
+    fn from(context: &UiViewComponentContextContext) -> Self {
+        match context {
+            UiViewComponentContextContext::AccountId(id)
+            | UiViewComponentContextContext::FolderId(id)
+            | UiViewComponentContextContext::EmailId(id) => id.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiViewComponentContext {
     pub command_group: String,
     pub command_type: String,
     pub arguments: HashMap<String, Value>,
-    pub context: HashMap<String, Value>,
+    pub context: Vec<UiViewComponentContextContext>,
+}
+
+impl UiViewComponentContext {
+    pub fn get_required_context(
+        &self,
+        matcher: &str,
+        error_msg: Option<&str>,
+    ) -> anyhow::Result<&UiViewComponentContextContext> {
+        for arg in &self.context {
+            if matcher == arg.context_type() {
+                return Ok(arg);
+            }
+        }
+
+        Err(anyhow::anyhow!(
+            "{}",
+            error_msg.unwrap_or("required context argument not found")
+        ))
+    }
+
+    #[must_use]
+    pub fn get_optional_context(&self, matcher: &str) -> Option<&UiViewComponentContextContext> {
+        self.context
+            .iter()
+            .find(|&arg| matcher == arg.context_type())
+            .map(|v| v as _)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,9 +151,10 @@ mod tests {
         let mut arguments = HashMap::new();
         arguments.insert("limit".into(), json!(4));
 
-        let mut context = HashMap::new();
-        context.insert("account".into(), json!("nic@aliyssium.com"));
-        context.insert("folder".into(), json!("inbox"));
+        let context = vec![
+            UiViewComponentContextContext::AccountId("nic@aliyssium.com".into()),
+            UiViewComponentContextContext::FolderId("inbox".into()),
+        ];
 
         let component = UiViewComponent {
             id: "accounts".into(),
@@ -118,7 +194,7 @@ mod tests {
                         command_group: "Mail".into(),
                         command_type: "Tree".into(),
                         arguments: HashMap::new(),
-                        context: HashMap::new(),
+                        context: vec![],
                     },
                     layout: Some(UiViewComponentLayout {
                         position: "left".into(),
@@ -136,7 +212,7 @@ mod tests {
                         command_group: "Mail".into(),
                         command_type: "List".into(),
                         arguments: HashMap::new(),
-                        context: HashMap::new(),
+                        context: vec![],
                     },
                     layout: Some(UiViewComponentLayout {
                         position: "right".into(),

@@ -15,7 +15,7 @@ use account::list::AccountList;
 use help::{About, Changelog, Help};
 use ui::{Close, Open, Refresh, Toggle};
 
-use crate::commands::folder::list::FolderList;
+use crate::{api::config::ui::view::UiViewComponent, commands::folder::list::FolderList};
 
 /// A trait for implementing User Commands in Neovim.
 ///
@@ -44,6 +44,12 @@ where
 
     /// A brief explanation of the command.
     const DESCRIPTION: &'static str = "";
+
+    /// The default view component to render when the command is executed.
+    #[must_use]
+    fn default_view_component() -> Option<UiViewComponent> {
+        None
+    }
 
     /// Create a new user command and register it to Neovim.
     ///

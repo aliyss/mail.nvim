@@ -1,6 +1,5 @@
 use std::future::Future;
 
-use crate::api::account::Account;
 use crate::api::folder::Folder;
 
 pub trait ListFolders {
@@ -11,7 +10,7 @@ pub trait ListFolders {
     /// Returns an error if the command fails.
     fn list_folders(
         &self,
-        account: &Account,
+        account_id: &str,
     ) -> impl Future<Output = anyhow::Result<Vec<Folder>>> + Send;
 }
 
@@ -23,7 +22,7 @@ pub trait GetFolder {
     /// Returns an error if the command fails.
     fn get_folder(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: &str,
     ) -> impl Future<Output = anyhow::Result<Option<Folder>>> + Send;
 }
@@ -36,7 +35,7 @@ pub trait CreateFolder {
     /// Returns an error if the command fails.
     fn create_folder(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_name: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
@@ -50,7 +49,7 @@ pub trait DeleteFolder {
     /// Returns an error if the command fails.
     fn delete_folder(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
@@ -64,7 +63,7 @@ pub trait ExpungeMessages {
     /// Returns an error if the command fails.
     fn expunge_messages(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
@@ -78,7 +77,7 @@ pub trait PurgeMessages {
     /// Returns an error if the command fails.
     fn purge_messages(
         &self,
-        account: &Account,
+        account_id: &str,
         folder_id: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }

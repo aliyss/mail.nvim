@@ -1,4 +1,4 @@
-use crate::utils::render::table::{RenderTable, RowBuilder};
+use crate::utils::render::table::render::{RenderTable, RowBuilder};
 
 pub mod commands;
 
@@ -67,6 +67,8 @@ impl Folder {
 }
 
 impl RenderTable for Vec<Folder> {
+    type Item = Folder;
+
     fn headers(&self) -> Vec<String> {
         vec![
             "ID".to_string(),

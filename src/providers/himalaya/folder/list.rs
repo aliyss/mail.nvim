@@ -3,14 +3,13 @@ use email::folder::list::ListFolders as _;
 use pimalaya_tui::himalaya::config::Folders as HimalayaFolders;
 
 use super::super::HimalayaProvider;
-use crate::api::account::Account;
 use crate::api::folder::Folder;
 use crate::api::folder::commands::ListFolders;
 
 impl ListFolders for HimalayaProvider {
-    async fn list_folders(&self, account: &Account) -> anyhow::Result<Vec<Folder>> {
+    async fn list_folders(&self, account_id: &str) -> anyhow::Result<Vec<Folder>> {
         let backend = self
-            .get_backend(account, |builder| {
+            .get_backend(account_id, |builder| {
                 builder
                     .without_features()
                     .with_list_folders(BackendFeatureSource::Context)
@@ -46,7 +45,7 @@ mod tests {
             .get_default_account()
             .expect("failed to get default account");
         let folders = provider
-            .list_folders(&account)
+            .list_folders(account.name())
             .await
             .expect("expected to list folders");
 

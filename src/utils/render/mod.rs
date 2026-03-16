@@ -1,20 +1,27 @@
 use crate::api::account::Account;
+use crate::api::folder::Folder;
 use crate::api::folder::commands::ListFolders;
+use crate::utils::buffer::render::{FromBuffer, ToBuffer};
+use crate::utils::keymaps::create_localized_keymap;
+use crate::utils::render::table::context::fetch_row_from_buffer;
+use crate::utils::render::table::render::Table;
+
 pub mod table;
 
-use self::table::Table;
-use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use anyhow::Context;
-use nvim_oxi::api::opts::{OptionOpts, OptionScope};
+use nvim_oxi::Object;
+use nvim_oxi::api::opts::{OptionOpts, OptionScope, SetKeymapOpts};
+use nvim_oxi::api::types::Mode;
 use nvim_oxi::api::{self, Buffer};
 
-use crate::api::account::commands::{GetAccount, ListAccounts};
+use crate::api::account::commands::ListAccounts;
 use crate::api::config::Config;
-use crate::api::config::ui::view::{UiView, UiViewComponent, UiViewComponentType};
-use crate::api::file::TryFile;
-use crate::utils::buffer::name::{get_command_buffer_metadata, set_command_buffer_metadata};
+use crate::api::config::ui::view::{
+    UiViewComponent, UiViewComponentContextContext, UiViewComponentType,
+};
+use crate::utils::buffer::metadata::BufferMetadata;
 use tokio::runtime::Runtime;
 
 pub static ASYNC_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
@@ -24,198 +31,207 @@ pub static ASYNC_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
         .expect("Failed to create Tokio runtime")
 });
 
-type RenderResult<T> = anyhow::Result<T>;
-
-pub(crate) async fn render_ui_view_from_config(buffer: &mut Buffer, config_path: Option<PathBuf>) {
-    if let Err(err) = render_ui_view_from_config_inner(buffer, config_path).await {
-        eprintln!("Error rendering UI view: {err:#}");
-    }
+pub enum ComponentData {
+    Accounts(Vec<Account>),
+    Folders(Vec<Folder>),
+    None,
 }
 
-async fn render_ui_view_from_config_inner(
-    buffer: &mut Buffer,
-    config_path: Option<PathBuf>,
-) -> RenderResult<()> {
-    let config = Config::read_from_file(config_path).context("failed to read config file")?;
+fn get_optional_context_by_id<'a>(
+    matcher: &str,
+    component: &'a UiViewComponent,
+    metadata: Option<&'a BufferMetadata>,
+) -> Option<&'a UiViewComponentContextContext> {
+    if let Some(ctx) = component.context.get_optional_context(matcher) {
+        return Some(ctx);
+    }
 
-    let file_name = Some(&config.default_view_path).map(|path| {
-        let actual_path = PathBuf::from(path);
-        if actual_path.is_absolute() {
-            actual_path
-        } else {
-            let folder_path = "views/";
-            PathBuf::from(folder_path).join(actual_path)
+    if let Some(buffer_metadata) = metadata {
+        return get_optional_context_by_id(matcher, &buffer_metadata.component, None);
+    }
+
+    None
+}
+
+fn get_required_context_by_id<'a>(
+    matcher: &str,
+    component: &'a UiViewComponent,
+    metadata: Option<&'a BufferMetadata>,
+) -> anyhow::Result<&'a UiViewComponentContextContext> {
+    match component.context.get_required_context(matcher, None) {
+        Ok(ctx) => Ok(ctx),
+        Err(err) => {
+            if let Some(buffer_metadata) = metadata {
+                return get_required_context_by_id(matcher, &buffer_metadata.component, None);
+            }
+            anyhow::bail!("required context not found: {err:#}");
         }
-    });
-
-    let opts = OptionOpts::builder().scope(OptionScope::Local).build();
-    api::set_option_value("modifiable", true, &opts)?;
-
-    buffer.set_lines(.., false, ["Rendering Mail UI View...", ""])?;
-
-    let view = UiView::read_from_file_with_path(file_name)
-        .context("failed to read UiView from specified file or default")?;
-
-    buffer.set_lines(.., false, ["Rendering Mail UI View...", &view.name])?;
-
-    let json_view_string =
-        serde_json::to_string_pretty(&view).context("failed to serialize UiView to JSON string")?;
-    buffer.set_lines(.., false, [json_view_string])?;
-
-    for component in view.components {
-        render_ui_view_from_component(buffer.clone(), None, component, config.clone()).await;
     }
-
-    api::set_option_value("modifiable", false, &opts)?;
-
-    Ok(())
 }
 
-pub(crate) async fn render_ui_view_from_component(
-    mut buffer: Buffer,
+pub fn get_context(
     current_buffer: Option<Buffer>,
-    component: UiViewComponent,
-    config: Config,
-) {
-    // For now, other types are synchronous or unimplemented stubs
-    let opts = OptionOpts::builder().scope(OptionScope::Local).build();
-    let _ = api::set_option_value("modifiable", true, &opts);
-
-    match component.component_type {
-        UiViewComponentType::Drawer => render_drawer(&component),
-        UiViewComponentType::Detail => render_detail(&component),
-        UiViewComponentType::Preview => render_preview(&component),
-        UiViewComponentType::File => render_file(&component),
-        UiViewComponentType::Table => {
-            render_table_async(&component, config.clone(), &mut buffer, current_buffer)
-                .await
-                .expect("failed to render table component");
-        }
-        UiViewComponentType::Other(_) => render_other(&component),
-    }
-
-    set_command_buffer_metadata(&mut buffer, &component, &config);
-    let _ = api::set_option_value("modifiable", false, &opts);
-}
-
-async fn render_table_async(
     component: &UiViewComponent,
-    config: Config,
-    buffer: &mut Buffer,
-    current_buffer: Option<Buffer>,
-) -> anyhow::Result<()> {
-    let provider = match config.to_provider() {
-        Ok(provider) => provider,
-        Err(e) => {
-            api::err_writeln(&format!("Failed to initialize provider: {e}"));
-            anyhow::bail!("failed to initialize provider: {e}");
+) -> anyhow::Result<Vec<UiViewComponentContextContext>> {
+    let mut context: Vec<UiViewComponentContextContext> = Vec::new();
+
+    if component.context.command_group.as_str() == "Folder"
+        && component.context.command_type == "List"
+    {
+        let buffer_metadata = current_buffer
+            .as_ref()
+            .and_then(|buf| BufferMetadata::from_buffer(buf, None).ok());
+
+        let account_id =
+            get_optional_context_by_id("account_id", component, buffer_metadata.as_ref());
+
+        if let Some(account_id) = account_id {
+            context.push(account_id.clone());
+            return Ok(context);
         }
-    };
+
+        if let Some(buffer) = current_buffer {
+            let row = match fetch_row_from_buffer::<Vec<Account>>(
+                &buffer,
+                buffer_metadata.map_or(0, |meta| meta.line_count),
+            ) {
+                Ok(row) => row,
+                Err(_err) => {
+                    return Ok(context);
+                }
+            };
+
+            context.push(UiViewComponentContextContext::AccountId(
+                row.name().to_string(),
+            ));
+        }
+    }
+
+    Ok(context)
+}
+
+pub async fn get_data(
+    component: &UiViewComponent,
+    config: &Config,
+) -> anyhow::Result<ComponentData> {
+    let provider = config
+        .to_provider()
+        .context("failed to initialize provider")?;
+
     match component.context.command_group.as_str() {
         "Account" => {
             if component.context.command_type == "List" {
                 let accounts = provider
                     .list_accounts()
                     .context("failed to list accounts")?;
-                let table = Table::new(accounts);
-                table.render(buffer)?;
+                return Ok(ComponentData::Accounts(accounts));
             }
         }
         "Folder" => {
             if component.context.command_type == "List" {
-                let account_data =
-                    fetch_account_context(component, &config.clone(), current_buffer)?;
+                let account_id = component.context.get_required_context("account_id", None)?;
 
-                if let Some(account) = account_data {
-                    let mut buffer_clone = buffer.clone();
-                    let folders_result = provider.list_folders(&account).await;
+                let folders = provider
+                    .list_folders(account_id.as_str())
+                    .await
+                    .context("failed to list folders")?;
 
-                    match folders_result {
-                        Ok(folders) => {
-                            let table = Table::new(folders);
-                            // Ensure the buffer is still valid and modifiable here
-                            let _ = table.render(&mut buffer_clone);
-                        }
-                        Err(e) => {
-                            api::err_writeln(&format!("Failed to list folders: {e}"));
-                        }
-                    }
-                }
+                return Ok(ComponentData::Folders(folders));
             }
         }
         _ => {}
     }
 
-    Ok(())
+    Ok(ComponentData::None)
 }
 
-fn fetch_account_context(
-    component: &UiViewComponent,
-    config: &Config,
-    current_buffer: Option<Buffer>,
-) -> anyhow::Result<Option<Account>> {
-    if let Some(account_id) = component
-        .context
-        .context
-        .get("account")
-        .and_then(|v| v.as_str())
-    {
-        let provider = config.to_provider().context("provider init failed")?;
-        return Ok(provider.get_account(account_id).unwrap_or(None));
+pub fn create_base_buffer(opts: &OptionOpts) -> anyhow::Result<Buffer> {
+    let in_buffer_list = false;
+    let is_temporary = true;
+    let buffer = match api::create_buf(in_buffer_list, is_temporary) {
+        Ok(buffer) => buffer,
+        Err(err) => anyhow::bail!("failed to create buffer: {err}"),
+    };
+
+    if let Err(err) = api::set_current_buf(&buffer) {
+        anyhow::bail!("failed to set current buffer: {err}");
     }
 
-    if let Some(mut buf) = current_buffer {
-        // Metadata access involves Neovim API calls, must be scheduled
-        let config = config.clone();
+    let options: [(&'static str, Object); 3] = [
+        // Allows users to use `ftplugin` to customize the buffer.
+        ("filetype", Object::from("mail-table")),
+        // Prevents users from saving the file.
+        ("buftype", Object::from("nofile")),
+        // Prevents users from entering INSERT mode.
+        ("modifiable", Object::from(true)),
+    ];
 
-        let metadata = match get_command_buffer_metadata(&mut buf, &config) {
-            Ok(meta) => meta,
-            Err(e) => {
-                println!("Failed to get buffer metadata: {e:?}");
-                return Ok(None);
-            }
-        };
-
-        let has_table_data = match Table::<Vec<Account>>::from_buffer_lines(&metadata, &mut buf) {
-            Ok(data) => data,
-            Err(e) => {
-                println!("Failed to parse table data from buffer: {e:?}");
-                return Ok(None);
-            }
-        };
-
-        let table_data = has_table_data.unwrap_or_default();
-
-        let (row, _) = match buf.get_mark('\"') {
-            Ok(pos) => pos,
-            Err(e) => {
-                println!("Failed to get cursor position: {e}");
-                return Ok(None);
-            }
-        };
-
-        let buffer_line_count = match buf.line_count() {
-            Ok(count) => count,
-            Err(e) => {
-                println!("Failed to get buffer line count: {e}");
-                return Ok(None);
-            }
-        };
-
-        let table_data_len = table_data.len();
-
-        if row == 0 || row > buffer_line_count {
-            println!("Cursor position is out of buffer bounds");
-            return Ok(None);
+    for (name, value) in options {
+        if let Err(err) = api::set_option_value(name, value, opts) {
+            anyhow::bail!("failed to set option value: {err}");
         }
-
-        let result = table_data
-            .get(row - (1 + buffer_line_count - table_data_len))
-            .cloned();
-        return Ok(result);
     }
 
-    Ok(None)
+    Ok(buffer)
+}
+
+pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Result<()> {
+    let opts = OptionOpts::builder().scope(OptionScope::Local).build();
+    let mut buffer = create_base_buffer(&opts)?;
+
+    let metadata = match BufferMetadata::new(component.clone()).to_buffer(&mut buffer, 0) {
+        Ok(metadata) => metadata,
+        Err(err) => anyhow::bail!("failed to render buffer metadata: {err}"),
+    };
+
+    let mut keymaps = Vec::from([(Mode::Normal, "q", ":bdelete<CR>".to_string())]);
+
+    match component.component_type {
+        UiViewComponentType::Drawer => render_drawer(component),
+        UiViewComponentType::Detail => render_detail(component),
+        UiViewComponentType::Preview => render_preview(component),
+        UiViewComponentType::File => render_file(component),
+        UiViewComponentType::Table => match data {
+            ComponentData::Accounts(accounts) => {
+                let line_count = metadata.line_count;
+                let table =
+                    match Table::<Vec<Account>>::new(accounts).to_buffer(&mut buffer, line_count) {
+                        Ok(table) => table,
+                        Err(err) => anyhow::bail!("failed to render accounts table: {err}"),
+                    };
+
+                let start_line = line_count + table.offset + 1;
+                let end_line = start_line + table.data.len();
+                let localized_keymap = create_localized_keymap(
+                    "MailFolderList",
+                    start_line,
+                    end_line,
+                    "No account selected",
+                );
+
+                keymaps.push((Mode::Normal, "i", localized_keymap.clone()));
+                keymaps.push((Mode::Normal, "<CR>", localized_keymap));
+            }
+            ComponentData::Folders(folders) => {
+                let table = Table::<Vec<Folder>>::new(folders);
+                table.to_buffer(&mut buffer, metadata.line_count)?;
+            }
+            ComponentData::None => {}
+        },
+        UiViewComponentType::Other(_) => render_other(component),
+    }
+
+    let keymap_opts = SetKeymapOpts::builder().silent(true).build();
+
+    for (mode, keys, command) in keymaps {
+        if let Err(err) = buffer.set_keymap(mode, keys, &command, &keymap_opts) {
+            anyhow::bail!("failed to set keymap: {err}");
+        }
+    }
+
+    api::set_option_value("modifiable", false, &opts)?;
+
+    Ok(())
 }
 
 fn render_drawer(_component: &UiViewComponent) {

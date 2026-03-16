@@ -1,14 +1,13 @@
 use email::backend::feature::BackendFeatureSource;
 use email::folder::add::AddFolder;
 
-use crate::api::account::Account;
 use crate::api::folder::commands::CreateFolder;
 use crate::providers::himalaya::HimalayaProvider;
 
 impl CreateFolder for HimalayaProvider {
-    async fn create_folder(&self, account: &Account, folder_name: &str) -> anyhow::Result<()> {
+    async fn create_folder(&self, account_id: &str, folder_name: &str) -> anyhow::Result<()> {
         let backend = self
-            .get_backend(account, |builder| {
+            .get_backend(account_id, |builder| {
                 builder
                     .without_features()
                     .with_add_folder(BackendFeatureSource::Context)

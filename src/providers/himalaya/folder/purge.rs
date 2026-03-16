@@ -2,15 +2,14 @@ use anyhow::anyhow;
 use email::backend::feature::BackendFeatureSource;
 use email::folder::purge::PurgeFolder;
 
-use crate::api::account::Account;
 use crate::api::folder::commands::PurgeMessages;
 use crate::providers::himalaya::HimalayaProvider;
 
 impl PurgeMessages for HimalayaProvider {
     /// Purge all messages in the specified folder, regardless of their flags.
     /// This is a more aggressive operation than expunge.
-    async fn purge_messages(&self, account: &Account, folder_id: &str) -> anyhow::Result<()> {
-        self.get_backend(account, |builder| {
+    async fn purge_messages(&self, account_id: &str, folder_id: &str) -> anyhow::Result<()> {
+        self.get_backend(account_id, |builder| {
             builder
                 .without_features()
                 .with_purge_folder(BackendFeatureSource::Context)
