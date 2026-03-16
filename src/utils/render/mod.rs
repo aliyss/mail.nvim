@@ -1,4 +1,6 @@
 use crate::api::account::Account;
+use crate::api::envelope::Envelope;
+use crate::api::envelope::commands::ListEnvelopes;
 use crate::api::folder::Folder;
 use crate::api::folder::commands::ListFolders;
 use crate::utils::buffer::render::{FromBuffer, ToBuffer};
@@ -34,6 +36,7 @@ pub static ASYNC_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
 pub enum ComponentData {
     Accounts(Vec<Account>),
     Folders(Vec<Folder>),
+    Envelopes(Vec<Envelope>),
     None,
 }
 
@@ -105,6 +108,65 @@ pub fn get_context(
                 row.name().to_string(),
             ));
         }
+    } else if component.context.command_group.as_str() == "Envelope"
+        && component.context.command_type == "List"
+    {
+        let buffer_metadata = current_buffer
+            .as_ref()
+            .and_then(|buf| BufferMetadata::from_buffer(buf, None).ok());
+
+        let account_id =
+            get_optional_context_by_id("account_id", component, buffer_metadata.as_ref());
+
+        let folder_id =
+            get_optional_context_by_id("folder_id", component, buffer_metadata.as_ref());
+
+        if let Some(account_id) = account_id {
+            context.push(account_id.clone());
+        }
+
+        if let Some(folder_id) = folder_id {
+            context.push(folder_id.clone());
+        }
+
+        if let Some(_) = folder_id
+            && let Some(_) = account_id
+        {
+            return Ok(context);
+        }
+
+        if let Some(buffer) = current_buffer
+            && let Some(buffer_metadata) = buffer_metadata
+        {
+            if buffer_metadata.component.context.command_group.as_str() == "Account" {
+                let row = match fetch_row_from_buffer::<Vec<Account>>(
+                    &buffer,
+                    buffer_metadata.line_count,
+                ) {
+                    Ok(row) => row,
+                    Err(_err) => {
+                        return Ok(context);
+                    }
+                };
+
+                context.push(UiViewComponentContextContext::AccountId(
+                    row.name().to_string(),
+                ));
+            } else if buffer_metadata.component.context.command_group.as_str() == "Folder" {
+                let row =
+                    match fetch_row_from_buffer::<Vec<Folder>>(&buffer, buffer_metadata.line_count)
+                    {
+                        Ok(row) => row,
+                        Err(_err) => {
+                            return Ok(context);
+                        }
+                    };
+
+                context.push(UiViewComponentContextContext::FolderId(
+                    row.id().to_string(),
+                ));
+            }
+        }
     }
 
     Ok(context)
@@ -137,6 +199,28 @@ pub async fn get_data(
                     .context("failed to list folders")?;
 
                 return Ok(ComponentData::Folders(folders));
+            }
+        }
+        "Envelope" => {
+            if component.context.command_type == "List" {
+                let account_id = component.context.get_required_context("account_id", None)?;
+                let folder_id = component.context.get_optional_context("folder_id");
+
+                let envelopes = match provider
+                    .list_envelopes(
+                        account_id.as_str(),
+                        folder_id.map(UiViewComponentContextContext::as_str),
+                        None,
+                    )
+                    .await
+                {
+                    Ok(envelopes) => envelopes,
+                    Err(_err) => {
+                        anyhow::bail!("failed to list envelopes.");
+                    }
+                };
+
+                return Ok(ComponentData::Envelopes(envelopes));
             }
         }
         _ => {}
@@ -193,14 +277,14 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
         UiViewComponentType::File => render_file(component),
         UiViewComponentType::Table => match data {
             ComponentData::Accounts(accounts) => {
-                let line_count = metadata.line_count;
-                let table =
-                    match Table::<Vec<Account>>::new(accounts).to_buffer(&mut buffer, line_count) {
-                        Ok(table) => table,
-                        Err(err) => anyhow::bail!("failed to render accounts table: {err}"),
-                    };
+                let table = match Table::<Vec<Account>>::new(accounts)
+                    .to_buffer(&mut buffer, metadata.line_count)
+                {
+                    Ok(table) => table,
+                    Err(err) => anyhow::bail!("failed to render accounts table: {err}"),
+                };
 
-                let start_line = line_count + table.offset + 1;
+                let start_line = metadata.line_count + table.offset + 1;
                 let end_line = start_line + table.data.len();
                 let localized_keymap = create_localized_keymap(
                     "MailFolderList",
@@ -213,10 +297,32 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
                 keymaps.push((Mode::Normal, "<CR>", localized_keymap));
             }
             ComponentData::Folders(folders) => {
-                let table = Table::<Vec<Folder>>::new(folders);
+                let table = match Table::<Vec<Folder>>::new(folders)
+                    .to_buffer(&mut buffer, metadata.line_count)
+                {
+                    Ok(table) => table,
+                    Err(err) => anyhow::bail!("failed to render folders table: {err}"),
+                };
+
+                let start_line = metadata.line_count + table.offset + 1;
+                let end_line = start_line + table.data.len();
+                let localized_keymap = create_localized_keymap(
+                    "MailEnvelopeList",
+                    start_line,
+                    end_line,
+                    "No folder selected",
+                );
+
+                keymaps.push((Mode::Normal, "i", localized_keymap.clone()));
+                keymaps.push((Mode::Normal, "<CR>", localized_keymap));
+            }
+            ComponentData::Envelopes(envelopes) => {
+                let table = Table::<Vec<Envelope>>::new(envelopes);
                 table.to_buffer(&mut buffer, metadata.line_count)?;
             }
-            ComponentData::None => {}
+            ComponentData::None => {
+                nvim_oxi::print!("None rendering not implemented yet.");
+            }
         },
         UiViewComponentType::Other(_) => render_other(component),
     }

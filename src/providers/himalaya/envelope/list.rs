@@ -100,4 +100,26 @@ mod tests {
 
         assert!(envelopes.len() <= 1, "expected at most one envelope");
     }
+
+    #[tokio::test]
+    async fn envelopes_list_folder() {
+        let config = Config::builder()
+            .build()
+            .expect("expected default builder to be valid");
+        let provider = HimalayaProvider::from_config(&config)
+            .expect("expected to create himalaya provider from default config");
+        let account = provider
+            .get_default_account()
+            .expect("failed to get default account");
+        let options = EnvelopeListArguments::new(
+            Some(1), // page
+            Some(1), // per_page
+        );
+        let envelopes = provider
+            .list_envelopes(account.name(), Some("Snoozed"), Some(options))
+            .await
+            .expect("expected to list envelopes");
+
+        assert!(envelopes.len() <= 1, "expected at most one envelope");
+    }
 }
