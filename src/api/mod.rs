@@ -1,6 +1,6 @@
 pub mod account;
 pub mod config;
-pub mod envelope;
+pub mod email;
 pub mod file;
 pub mod folder;
 pub mod help;

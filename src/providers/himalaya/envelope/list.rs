@@ -1,29 +1,29 @@
 use email::backend::feature::BackendFeatureSource;
-use email::envelope::list::ListEnvelopesOptions as EmailListEnvelopeOptions;
+use email::envelope::list::ListEnvelopesOptions as EnvelopeListEnvelopeOptions;
 
-use crate::api::envelope::Envelope;
-use crate::api::envelope::arguments::EnvelopeListArguments;
-use crate::api::envelope::commands::ListEnvelopes;
+use crate::api::email::Email;
+use crate::api::email::arguments::EmailListArguments;
+use crate::api::email::commands::ListEmails;
 use crate::providers::himalaya::HimalayaProvider;
 
-impl ListEnvelopes for HimalayaProvider {
-    async fn list_envelopes(
+impl ListEmails for HimalayaProvider {
+    async fn list_emails(
         &self,
         account_id: &str,
         folder_id: Option<&str>,
-        options: Option<EnvelopeListArguments>,
-    ) -> anyhow::Result<Vec<Envelope>> {
+        options: Option<EmailListArguments>,
+    ) -> anyhow::Result<Vec<Email>> {
         let (himalaya_account_config, email_account_config) =
             self.get_account_config(account_id)?;
 
-        let envelope_folder_id = match folder_id {
+        let email_folder_id = match folder_id {
             Some(id) => id.to_owned(),
             None => email_account_config.get_inbox_folder_alias(),
         };
 
-        let envelope_options = options.unwrap_or_default();
-        let page = envelope_options.page_or_default();
-        let per_page = envelope_options
+        let email_options = options.unwrap_or_default();
+        let page = email_options.page_or_default();
+        let per_page = email_options
             .per_page_or_default(Some(|| email_account_config.get_envelope_list_page_size()));
 
         let backend = Self::get_backend_from_config(
@@ -37,21 +37,18 @@ impl ListEnvelopes for HimalayaProvider {
         )
         .await?;
 
-        let list_envelope_options = EmailListEnvelopeOptions {
+        let list_email_options = EnvelopeListEnvelopeOptions {
             page,
             page_size: per_page,
             query: None,
         };
 
-        let envelopes = backend
-            .list_envelopes(&envelope_folder_id, list_envelope_options)
+        let emails = backend
+            .list_envelopes(&email_folder_id, list_email_options)
             .await
-            .expect("failed to list envelopes");
+            .expect("failed to list emails");
 
-        Ok(envelopes
-            .iter()
-            .map(|envelope| envelope.clone().into())
-            .collect())
+        Ok(emails.iter().map(|email| email.clone().into()).collect())
     }
 }
 
@@ -62,7 +59,7 @@ mod tests {
     use crate::api::config::Config;
 
     #[tokio::test]
-    async fn envelopes_list() {
+    async fn emails_list() {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
@@ -71,16 +68,16 @@ mod tests {
         let account = provider
             .get_default_account()
             .expect("failed to get default account");
-        let envelopes = provider
-            .list_envelopes(account.name(), None, None)
+        let emails = provider
+            .list_emails(account.name(), None, None)
             .await
-            .expect("expected to list envelopes");
+            .expect("expected to list emails");
 
-        assert!(!envelopes.is_empty());
+        assert!(!emails.is_empty());
     }
 
     #[tokio::test]
-    async fn envelopes_list_per_page() {
+    async fn emails_list_per_page() {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
@@ -89,20 +86,20 @@ mod tests {
         let account = provider
             .get_default_account()
             .expect("failed to get default account");
-        let options = EnvelopeListArguments::new(
+        let options = EmailListArguments::new(
             Some(1), // page
             Some(1), // per_page
         );
-        let envelopes = provider
-            .list_envelopes(account.name(), None, Some(options))
+        let emails = provider
+            .list_emails(account.name(), None, Some(options))
             .await
-            .expect("expected to list envelopes");
+            .expect("expected to list emails");
 
-        assert!(envelopes.len() <= 1, "expected at most one envelope");
+        assert!(emails.len() <= 1, "expected at most one email");
     }
 
     #[tokio::test]
-    async fn envelopes_list_folder() {
+    async fn emails_list_folder() {
         let config = Config::builder()
             .build()
             .expect("expected default builder to be valid");
@@ -111,15 +108,15 @@ mod tests {
         let account = provider
             .get_default_account()
             .expect("failed to get default account");
-        let options = EnvelopeListArguments::new(
+        let options = EmailListArguments::new(
             Some(1), // page
             Some(1), // per_page
         );
-        let envelopes = provider
-            .list_envelopes(account.name(), Some("Snoozed"), Some(options))
+        let emails = provider
+            .list_emails(account.name(), Some("Snoozed"), Some(options))
             .await
-            .expect("expected to list envelopes");
+            .expect("expected to list emails");
 
-        assert!(envelopes.len() <= 1, "expected at most one envelope");
+        assert!(emails.len() <= 1, "expected at most one email");
     }
 }

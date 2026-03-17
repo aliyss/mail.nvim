@@ -75,7 +75,6 @@ impl<T: RenderTable> FromBuffer for Table<T> {
                     .chars()
                     .all(|c| c == '|' || c == '-' || c == '+' || c == ' ')
             {
-                nvim_oxi::print!("{line_offset} skipping separator line: {line}");
                 line_offset += 1;
                 continue;
             }
@@ -91,7 +90,6 @@ impl<T: RenderTable> FromBuffer for Table<T> {
             if cells.is_empty() {
                 // Only increment if we are still looking for the header
                 if headers.is_empty() {
-                    nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}");
                     line_offset += 1;
                 }
                 continue;
@@ -99,14 +97,11 @@ impl<T: RenderTable> FromBuffer for Table<T> {
 
             if headers.is_empty() {
                 headers = cells;
-                nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}");
                 line_offset += 1;
             } else {
                 rows.push(RowBuilder { cells });
             }
         }
-        nvim_oxi::print!("{line_offset}");
-        nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}, rows: {rows:?}");
 
         let table_data = T::from_headers_and_rows(headers, rows);
 

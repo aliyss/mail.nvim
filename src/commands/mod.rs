@@ -1,6 +1,6 @@
 pub mod account;
 pub mod config;
-pub mod envelope;
+pub mod email;
 pub mod folder;
 pub mod help;
 pub mod prelude;
@@ -18,7 +18,7 @@ use ui::{Close, Open, Refresh, Toggle};
 
 use crate::{
     api::config::ui::view::UiViewComponent,
-    commands::{envelope::list::EnvelopeList, folder::list::FolderList},
+    commands::{email::list::EmailList, folder::list::FolderList},
 };
 
 /// A trait for implementing User Commands in Neovim.
@@ -124,7 +124,7 @@ impl Name {
 pub(crate) fn register_commands() -> Result<(), api::Error> {
     AccountList::register()?;
     FolderList::register()?;
-    EnvelopeList::register()?;
+    EmailList::register()?;
 
     About::register()?;
     Changelog::register()?;

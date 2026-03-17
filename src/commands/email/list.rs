@@ -17,19 +17,19 @@ use crate::{
     utils::render::{ASYNC_RUNTIME, ComponentData, get_context, get_data, render},
 };
 
-pub struct EnvelopeList;
+pub struct EmailList;
 
-impl UserCommand for EnvelopeList {
-    const NAME: Name = Name::new("MailEnvelopeList");
-    const DESCRIPTION: &'static str = "List all envelopes in a mail account";
+impl UserCommand for EmailList {
+    const NAME: Name = Name::new("MailEmailList");
+    const DESCRIPTION: &'static str = "List all e-mails in a mail account";
 
     fn default_view_component() -> Option<UiViewComponent> {
         Some(UiViewComponent {
             id: "command-envelope-list".into(),
-            name: "EnvelopeList".into(),
+            name: "EmailList".into(),
             component_type: UiViewComponentType::Table,
             context: UiViewComponentContext {
-                command_group: "Envelope".into(),
+                command_group: "Email".into(),
                 command_type: "List".into(),
                 arguments: HashMap::new(),
                 context: Vec::new(),

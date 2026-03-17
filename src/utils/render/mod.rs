@@ -1,6 +1,6 @@
 use crate::api::account::Account;
-use crate::api::envelope::Envelope;
-use crate::api::envelope::commands::ListEnvelopes;
+use crate::api::email::Email;
+use crate::api::email::commands::ListEmails;
 use crate::api::folder::Folder;
 use crate::api::folder::commands::ListFolders;
 use crate::utils::buffer::render::{FromBuffer, ToBuffer};
@@ -36,7 +36,7 @@ pub static ASYNC_RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
 pub enum ComponentData {
     Accounts(Vec<Account>),
     Folders(Vec<Folder>),
-    Envelopes(Vec<Envelope>),
+    Emails(Vec<Email>),
     None,
 }
 
@@ -108,7 +108,7 @@ pub fn get_context(
                 row.name().to_string(),
             ));
         }
-    } else if component.context.command_group.as_str() == "Envelope"
+    } else if component.context.command_group.as_str() == "Email"
         && component.context.command_type == "List"
     {
         let buffer_metadata = current_buffer
@@ -201,26 +201,26 @@ pub async fn get_data(
                 return Ok(ComponentData::Folders(folders));
             }
         }
-        "Envelope" => {
+        "Email" => {
             if component.context.command_type == "List" {
                 let account_id = component.context.get_required_context("account_id", None)?;
                 let folder_id = component.context.get_optional_context("folder_id");
 
-                let envelopes = match provider
-                    .list_envelopes(
+                let emails = match provider
+                    .list_emails(
                         account_id.as_str(),
                         folder_id.map(UiViewComponentContextContext::as_str),
                         None,
                     )
                     .await
                 {
-                    Ok(envelopes) => envelopes,
+                    Ok(emails) => emails,
                     Err(_err) => {
-                        anyhow::bail!("failed to list envelopes.");
+                        anyhow::bail!("failed to list emails.");
                     }
                 };
 
-                return Ok(ComponentData::Envelopes(envelopes));
+                return Ok(ComponentData::Emails(emails));
             }
         }
         _ => {}
@@ -307,7 +307,7 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
                 let start_line = metadata.line_count + table.offset + 1;
                 let end_line = start_line + table.data.len();
                 let localized_keymap = create_localized_keymap(
-                    "MailEnvelopeList",
+                    "MailEmailList",
                     start_line,
                     end_line,
                     "No folder selected",
@@ -316,8 +316,8 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
                 keymaps.push((Mode::Normal, "i", localized_keymap.clone()));
                 keymaps.push((Mode::Normal, "<CR>", localized_keymap));
             }
-            ComponentData::Envelopes(envelopes) => {
-                let table = Table::<Vec<Envelope>>::new(envelopes);
+            ComponentData::Emails(emails) => {
+                let table = Table::<Vec<Email>>::new(emails);
                 table.to_buffer(&mut buffer, metadata.line_count)?;
             }
             ComponentData::None => {

@@ -1,9 +1,9 @@
-pub struct EnvelopeListArguments {
+pub struct EmailListArguments {
     page: Option<usize>,
     per_page: Option<usize>,
 }
 
-impl EnvelopeListArguments {
+impl EmailListArguments {
     #[must_use]
     pub fn new(page: Option<usize>, per_page: Option<usize>) -> Self {
         Self { page, per_page }
@@ -29,7 +29,7 @@ impl EnvelopeListArguments {
     }
 }
 
-impl Default for EnvelopeListArguments {
+impl Default for EmailListArguments {
     fn default() -> Self {
         Self {
             page: Some(1),

@@ -8,7 +8,7 @@ use crate::utils::render::table::render::{RenderTable, RowBuilder};
 
 /// Represents the flag variants.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
-pub enum EnvelopeFlag {
+pub enum EmailFlag {
     Seen,
     Answered,
     Flagged,
@@ -24,9 +24,9 @@ pub struct Mailbox {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Envelope {
+pub struct Email {
     id: String,
-    flags: HashSet<EnvelopeFlag>,
+    flags: HashSet<EmailFlag>,
     subject: String,
     from: Mailbox,
     to: Mailbox,
@@ -34,11 +34,11 @@ pub struct Envelope {
     has_attachment: bool,
 }
 
-impl Envelope {
+impl Email {
     #[must_use]
     pub fn new(
         id: String,
-        flags: HashSet<EnvelopeFlag>,
+        flags: HashSet<EmailFlag>,
         subject: String,
         from: Mailbox,
         to: Mailbox,
@@ -87,8 +87,8 @@ impl Envelope {
     }
 }
 
-impl RenderTable for Vec<Envelope> {
-    type Item = Envelope;
+impl RenderTable for Vec<Email> {
+    type Item = Email;
 
     fn headers(&self) -> Vec<String> {
         vec![
@@ -121,12 +121,12 @@ impl RenderTable for Vec<Envelope> {
                             .flags
                             .iter()
                             .map(|flag| match flag {
-                                EnvelopeFlag::Seen => "Seen".to_string(),
-                                EnvelopeFlag::Answered => "Answered".to_string(),
-                                EnvelopeFlag::Flagged => "Flagged".to_string(),
-                                EnvelopeFlag::Deleted => "Deleted".to_string(),
-                                EnvelopeFlag::Draft => "Draft".to_string(),
-                                EnvelopeFlag::Custom(name) => name.clone(),
+                                EmailFlag::Seen => "Seen".to_string(),
+                                EmailFlag::Answered => "Answered".to_string(),
+                                EmailFlag::Flagged => "Flagged".to_string(),
+                                EmailFlag::Deleted => "Deleted".to_string(),
+                                EmailFlag::Draft => "Draft".to_string(),
+                                EmailFlag::Custom(name) => name.clone(),
                             })
                             .collect::<Vec<String>>()
                             .join(", "),
@@ -136,7 +136,7 @@ impl RenderTable for Vec<Envelope> {
     }
 
     fn from_headers_and_rows(headers: Vec<String>, rows: Vec<RowBuilder>) -> Self {
-        let mut envelopes: Vec<Envelope> = Vec::new();
+        let mut envelopes: Vec<Email> = Vec::new();
         let id_index = headers
             .iter()
             .position(|h| h == "ID")
@@ -196,19 +196,19 @@ impl RenderTable for Vec<Envelope> {
                         .map(|flag_name| {
                             let trimmed_flag = flag_name.trim();
                             match trimmed_flag {
-                                "Seen" => EnvelopeFlag::Seen,
-                                "Answered" => EnvelopeFlag::Answered,
-                                "Flagged" => EnvelopeFlag::Flagged,
-                                "Deleted" => EnvelopeFlag::Deleted,
-                                "Draft" => EnvelopeFlag::Draft,
-                                custom => EnvelopeFlag::Custom(custom.to_string()),
+                                "Seen" => EmailFlag::Seen,
+                                "Answered" => EmailFlag::Answered,
+                                "Flagged" => EmailFlag::Flagged,
+                                "Deleted" => EmailFlag::Deleted,
+                                "Draft" => EmailFlag::Draft,
+                                custom => EmailFlag::Custom(custom.to_string()),
                             }
                         })
                         .collect()
                 })
             });
 
-            envelopes.push(Envelope::new(
+            envelopes.push(Email::new(
                 id,
                 flags.unwrap_or_default(),
                 subject.unwrap_or_default(),
