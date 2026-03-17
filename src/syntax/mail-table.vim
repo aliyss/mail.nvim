@@ -42,3 +42,4 @@ setlocal foldtext=ClearFoldText()
 hi! link Folded mailTableHeader
 
 let b:current_syntax = "mail-table"
+

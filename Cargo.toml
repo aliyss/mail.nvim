@@ -22,6 +22,8 @@ chrono = "0.4.42"
 anyhow = "1.0.100"
 once_cell = "1.21.4"
 flashlog = "0.3.5"
+comfy-table = { version = "7.2.2", features = ["custom_styling"] }
+regex = "1.12.3"
 
 [patch.crates-io]
 # Required due to imap-client having the rustls-platform-verifier which somehow breaks building himalaya

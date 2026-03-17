@@ -24,7 +24,7 @@ where
         }
     };
 
-    let result = table_data.data.get(row - table_data.offset).cloned();
+    let result = table_data.data.get(row - table_data.offset - 1).cloned();
 
     match result {
         Some(item) => Ok(item),

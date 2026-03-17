@@ -1,9 +1,16 @@
 use std::{fmt::Debug, ops::Deref};
 
-use anyhow::Ok;
-use nvim_oxi::api::Buffer;
+use comfy_table::{
+    Attribute, Cell, ColumnConstraint, Row, Table as ComfyTable,
+    presets::{ASCII_MARKDOWN, UTF8_NO_BORDERS},
+};
+use nvim_oxi::api::{self, Buffer};
+use regex::Regex;
 
-use crate::utils::buffer::render::{FromBuffer, ToBuffer};
+use crate::utils::buffer::{
+    get_real_width,
+    render::{FromBuffer, ToBuffer},
+};
 
 pub trait RenderTable: Deref<Target = [Self::Item]> + Debug {
     type Item;
@@ -51,7 +58,6 @@ impl<T: RenderTable> Table<T> {
 impl<T: RenderTable> FromBuffer for Table<T> {
     fn from_buffer(buffer: &Buffer, metadata_offset: Option<usize>) -> anyhow::Result<Self> {
         let mut line_offset = metadata_offset.unwrap_or(0);
-
         let lines: Vec<String> = buffer
             .get_lines(line_offset.., true)
             .map_err(|_| anyhow::anyhow!("failed to read lines from buffer"))?
@@ -60,30 +66,47 @@ impl<T: RenderTable> FromBuffer for Table<T> {
 
         let mut rows: Vec<RowBuilder> = Vec::new();
         let mut headers: Vec<String> = Vec::new();
+
         for line in lines {
-            // If the line contains the intersection character or is just dashes, skip it.
-            if line.contains('┼') || line.chars().all(|c| c == '─' || c == ' ' || c == '┼') {
-                line_offset += 1; // Skip the separator line and move to the next line
+            // 1. Skip separator lines (e.g., |-------|-------|)
+            // Check if the line is primarily composed of table-structure characters
+            if line.contains('|')
+                && line
+                    .chars()
+                    .all(|c| c == '|' || c == '-' || c == '+' || c == ' ')
+            {
+                nvim_oxi::print!("{line_offset} skipping separator line: {line}");
+                line_offset += 1;
                 continue;
             }
 
+            // 2. Split by the pipe '|' character
             let cells: Vec<String> = line
-                .split('│') // Use char literal
+                .split('|')
                 .map(|cell| cell.trim().to_string())
-                .filter(|cell| !cell.is_empty()) // Filter out empty strings from splitting edges
+                // 3. Filter out empty strings caused by the leading and trailing pipes
+                .filter(|cell| !cell.is_empty())
                 .collect();
 
             if cells.is_empty() {
+                // Only increment if we are still looking for the header
+                if headers.is_empty() {
+                    nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}");
+                    line_offset += 1;
+                }
                 continue;
             }
 
             if headers.is_empty() {
-                line_offset += 1;
                 headers = cells;
+                nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}");
+                line_offset += 1;
             } else {
                 rows.push(RowBuilder { cells });
             }
         }
+        nvim_oxi::print!("{line_offset}");
+        nvim_oxi::print!("{line_offset} skipping separator line: {headers:?}, rows: {rows:?}");
 
         let table_data = T::from_headers_and_rows(headers, rows);
 
@@ -96,54 +119,87 @@ impl<T: RenderTable> FromBuffer for Table<T> {
 
 impl<T: RenderTable> ToBuffer for Table<T> {
     fn to_buffer(mut self, buffer: &mut Buffer, line_offset: usize) -> anyhow::Result<Self> {
-        let mut data: Vec<Vec<String>> = Vec::new();
         let headers = self.data.headers();
         let has_headers = !headers.is_empty();
+        let mut table = ComfyTable::new();
+
+        table
+            .load_preset(ASCII_MARKDOWN)
+            .set_truncation_indicator("…")
+            .set_content_arrangement(comfy_table::ContentArrangement::DynamicFullWidth);
+
+        let win_width_result = get_real_width(&api::get_current_win(), buffer);
+
+        if let Ok(width) = win_width_result {
+            table.set_width(width);
+        }
+
         if has_headers {
-            self.offset += 1;
-            data.push(headers);
+            self.offset += 2;
+            let mut header_row = Row::from(headers.clone());
+            header_row.max_height(1);
+            table.set_header(header_row);
         }
 
         for row in self.data.rows() {
-            data.push(row.cells);
+            let cells = row
+                .cells
+                .iter()
+                .enumerate()
+                .map(|(idx, value)| {
+                    let mut table_cell = Cell::from(value);
+                    if idx == 0 && has_headers {
+                        table_cell = table_cell.add_attribute(Attribute::Bold);
+                    }
+                    table_cell
+                })
+                .collect::<Vec<Cell>>();
+            let mut table_row = Row::from(cells);
+            table_row.max_height(1);
+            table.add_row(table_row);
         }
 
-        if data.is_empty() {
-            return Ok(self);
-        }
-
-        let num_columns = data.iter().map(std::vec::Vec::len).max().unwrap_or(0);
-        let mut column_widths = vec![0; num_columns];
-
-        for row in &data {
-            for (i, cell) in row.iter().enumerate() {
-                column_widths[i] = column_widths[i].max(cell.len());
-            }
-        }
+        let column = table
+            .column_mut(0)
+            .expect("table should have at least one column");
+        column.set_constraint(ColumnConstraint::ContentWidth);
 
         let mut lines: Vec<String> = Vec::new();
-        for (idx, row) in data.into_iter().enumerate() {
-            let row_line = row
-                .into_iter()
-                .enumerate()
-                .map(|(i, cell)| format!("{:width$}", cell, width = column_widths[i]))
-                .collect::<Vec<_>>()
-                .join(" │ ");
-            lines.push(row_line);
+        let mut highlights = Vec::new(); // Stores (line_idx, start_col, end_col)
 
-            if has_headers && idx == 0 {
-                let separator = column_widths
-                    .iter()
-                    .map(|&w| "─".repeat(w))
-                    .collect::<Vec<_>>()
-                    .join("─┼─");
+        let bold_start_re = Regex::new(r"\x1b\[1m").unwrap();
+        let bold_reset_re = Regex::new(r"\x1b\[0m").unwrap();
 
-                self.offset += 1;
-                lines.push(separator);
+        for (row_idx, raw_row) in table.lines().enumerate() {
+            let mut clean_line = raw_row.clone();
+            let current_line_idx = line_offset + row_idx;
+
+            while let Some(start_match) = bold_start_re.find(&clean_line) {
+                let start_idx = start_match.start();
+
+                clean_line.replace_range(start_idx..start_match.end(), "");
+
+                if let Some(end_match) = bold_reset_re.find(&clean_line) {
+                    let end_idx = end_match.start();
+
+                    highlights.push((current_line_idx, start_idx, end_idx));
+
+                    clean_line.replace_range(end_idx..end_match.end(), "");
+                } else {
+                    highlights.push((current_line_idx, start_idx, clean_line.len()));
+                    break;
+                }
             }
+            lines.push(clean_line);
         }
 
+        // Apply to buffer
         buffer.set_lines(line_offset..line_offset, true, lines)?;
+
+        for (l, s, e) in highlights {
+            buffer.add_highlight(0, "Bold", l, s..e)?;
+        }
+
         Ok(self)
     }
 }
