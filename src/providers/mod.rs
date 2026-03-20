@@ -1,6 +1,6 @@
 use crate::api::{
     account::commands::{GetAccount, ListAccounts},
-    email::commands::ListEmails,
+    email::commands::{GetEmail, ListEmails},
     folder::commands::{CreateFolder, DeleteFolder, GetFolder, ListFolders},
 };
 
@@ -14,6 +14,7 @@ pub trait Provider:
     + DeleteFolder
     + CreateFolder
     + ListEmails
+    + GetEmail
     + Clone
 {
 }
@@ -25,6 +26,7 @@ impl<
         + DeleteFolder
         + CreateFolder
         + ListEmails
+        + GetEmail
         + Clone,
 > Provider for T
 {

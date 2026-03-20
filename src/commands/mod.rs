@@ -18,7 +18,10 @@ use ui::{Close, Open, Refresh, Toggle};
 
 use crate::{
     api::config::ui::view::UiViewComponent,
-    commands::{email::list::EmailList, folder::list::FolderList},
+    commands::{
+        email::{get::EmailGet, list::EmailList},
+        folder::list::FolderList,
+    },
 };
 
 /// A trait for implementing User Commands in Neovim.
@@ -125,6 +128,7 @@ pub(crate) fn register_commands() -> Result<(), api::Error> {
     AccountList::register()?;
     FolderList::register()?;
     EmailList::register()?;
+    EmailGet::register()?;
 
     About::register()?;
     Changelog::register()?;

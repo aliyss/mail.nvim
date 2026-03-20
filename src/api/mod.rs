@@ -1,5 +1,6 @@
 pub mod account;
 pub mod config;
+pub mod contact;
 pub mod email;
 pub mod file;
 pub mod folder;

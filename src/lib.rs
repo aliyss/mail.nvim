@@ -16,7 +16,10 @@ pub mod utils;
 
 use nvim_oxi::{
     self as nvim,
-    api::opts::{CreateAutocmdOpts, ExecOpts},
+    api::{
+        opts::{CreateAutocmdOpts, ExecOpts, OptionOpts},
+        types::AutocmdCallbackArgs,
+    },
 };
 
 use nvim::{Dictionary, Function, Object};
@@ -33,12 +36,26 @@ fn mail_nvim() -> Dictionary {
         .launch();
 
     let syntax_table = include_str!("./syntax/mail-table.vim");
+    let syntax_file = include_str!("./syntax/mail-file.vim");
 
     let opts = CreateAutocmdOpts::builder()
-        .patterns(["mail-table"])
-        .callback(move |_| -> nvim::Result<bool> {
+        .patterns(["mail-table", "mail-file"])
+        .callback(move |args: AutocmdCallbackArgs| -> nvim::Result<bool> {
             let exec_opts = ExecOpts::builder().output(false).build();
-            let _ = nvim::api::exec2(syntax_table, &exec_opts);
+
+            let buffer = args.buffer;
+
+            let opts = OptionOpts::builder().buffer(buffer).build();
+            let filetype = nvim::api::get_option_value::<String>("filetype", &opts)?;
+            let code = match filetype.as_str() {
+                "mail-table" => syntax_table,
+                "mail-file" => syntax_file,
+                _ => "",
+            };
+
+            if !code.is_empty() {
+                let _ = nvim::api::exec2(code, &exec_opts);
+            }
 
             Ok(false)
         })

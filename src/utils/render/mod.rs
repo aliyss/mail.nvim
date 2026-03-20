@@ -1,13 +1,15 @@
 use crate::api::account::Account;
-use crate::api::email::Email;
-use crate::api::email::commands::ListEmails;
+use crate::api::email::commands::{GetEmail, ListEmails};
+use crate::api::email::{Email, EmailMessage};
 use crate::api::folder::Folder;
 use crate::api::folder::commands::ListFolders;
 use crate::utils::buffer::render::{FromBuffer, ToBuffer};
 use crate::utils::keymaps::create_localized_keymap;
+use crate::utils::render::message::render::Message;
 use crate::utils::render::table::context::fetch_row_from_buffer;
 use crate::utils::render::table::render::Table;
 
+pub mod message;
 pub mod table;
 
 use std::sync::LazyLock;
@@ -37,6 +39,7 @@ pub enum ComponentData {
     Accounts(Vec<Account>),
     Folders(Vec<Folder>),
     Emails(Vec<Email>),
+    EmailMessages(Vec<EmailMessage>),
     None,
 }
 
@@ -108,63 +111,114 @@ pub fn get_context(
                 row.name().to_string(),
             ));
         }
-    } else if component.context.command_group.as_str() == "Email"
-        && component.context.command_type == "List"
-    {
-        let buffer_metadata = current_buffer
-            .as_ref()
-            .and_then(|buf| BufferMetadata::from_buffer(buf, None).ok());
+    } else if component.context.command_group.as_str() == "Email" {
+        if component.context.command_type == "List" {
+            let buffer_metadata = current_buffer
+                .as_ref()
+                .and_then(|buf| BufferMetadata::from_buffer(buf, None).ok());
 
-        let account_id =
-            get_optional_context_by_id("account_id", component, buffer_metadata.as_ref());
+            let account_id =
+                get_optional_context_by_id("account_id", component, buffer_metadata.as_ref());
 
-        let folder_id =
-            get_optional_context_by_id("folder_id", component, buffer_metadata.as_ref());
+            let folder_id =
+                get_optional_context_by_id("folder_id", component, buffer_metadata.as_ref());
 
-        if let Some(account_id) = account_id {
-            context.push(account_id.clone());
-        }
+            if let Some(account_id) = account_id {
+                context.push(account_id.clone());
+            }
 
-        if let Some(folder_id) = folder_id {
-            context.push(folder_id.clone());
-        }
+            if let Some(folder_id) = folder_id {
+                context.push(folder_id.clone());
+            }
 
-        if let Some(_) = folder_id
-            && let Some(_) = account_id
-        {
-            return Ok(context);
-        }
+            if let Some(_) = folder_id
+                && let Some(_) = account_id
+            {
+                return Ok(context);
+            }
 
-        if let Some(buffer) = current_buffer
-            && let Some(buffer_metadata) = buffer_metadata
-        {
-            if buffer_metadata.component.context.command_group.as_str() == "Account" {
-                let row = match fetch_row_from_buffer::<Vec<Account>>(
-                    &buffer,
-                    buffer_metadata.line_count,
-                ) {
-                    Ok(row) => row,
-                    Err(_err) => {
-                        return Ok(context);
-                    }
-                };
-
-                context.push(UiViewComponentContextContext::AccountId(
-                    row.name().to_string(),
-                ));
-            } else if buffer_metadata.component.context.command_group.as_str() == "Folder" {
-                let row =
-                    match fetch_row_from_buffer::<Vec<Folder>>(&buffer, buffer_metadata.line_count)
-                    {
+            if let Some(buffer) = current_buffer
+                && let Some(buffer_metadata) = buffer_metadata
+            {
+                if buffer_metadata.component.context.command_group.as_str() == "Account" {
+                    let row = match fetch_row_from_buffer::<Vec<Account>>(
+                        &buffer,
+                        buffer_metadata.line_count,
+                    ) {
                         Ok(row) => row,
                         Err(_err) => {
                             return Ok(context);
                         }
                     };
 
-                context.push(UiViewComponentContextContext::FolderId(
-                    row.id().to_string(),
-                ));
+                    context.push(UiViewComponentContextContext::AccountId(
+                        row.name().to_string(),
+                    ));
+                } else if buffer_metadata.component.context.command_group.as_str() == "Folder" {
+                    let row = match fetch_row_from_buffer::<Vec<Folder>>(
+                        &buffer,
+                        buffer_metadata.line_count,
+                    ) {
+                        Ok(row) => row,
+                        Err(_err) => {
+                            return Ok(context);
+                        }
+                    };
+
+                    context.push(UiViewComponentContextContext::FolderId(
+                        row.id().to_string(),
+                    ));
+                }
+            }
+        } else if component.context.command_type == "Get" {
+            let buffer_metadata = current_buffer
+                .as_ref()
+                .and_then(|buf| BufferMetadata::from_buffer(buf, None).ok());
+
+            let account_id =
+                get_optional_context_by_id("account_id", component, buffer_metadata.as_ref());
+
+            let folder_id =
+                get_optional_context_by_id("folder_id", component, buffer_metadata.as_ref());
+
+            let email_id =
+                get_optional_context_by_id("email_id", component, buffer_metadata.as_ref());
+
+            if let Some(account_id) = account_id {
+                context.push(account_id.clone());
+            }
+
+            if let Some(folder_id) = folder_id {
+                context.push(folder_id.clone());
+            }
+
+            if let Some(email_id) = email_id {
+                context.push(email_id.clone());
+            }
+
+            if let Some(_) = folder_id
+                && let Some(_) = account_id
+                && let Some(_) = email_id
+            {
+                return Ok(context);
+            }
+
+            if let Some(buffer) = current_buffer
+                && let Some(buffer_metadata) = buffer_metadata
+            {
+                if buffer_metadata.component.context.command_group.as_str() == "Email" {
+                    let row = match fetch_row_from_buffer::<Vec<Email>>(
+                        &buffer,
+                        buffer_metadata.line_count,
+                    ) {
+                        Ok(row) => row,
+                        Err(_err) => {
+                            return Ok(context);
+                        }
+                    };
+
+                    context.push(UiViewComponentContextContext::EmailId(row.id().to_string()));
+                }
             }
         }
     }
@@ -221,6 +275,27 @@ pub async fn get_data(
                 };
 
                 return Ok(ComponentData::Emails(emails));
+            } else if component.context.command_type == "Get" {
+                let account_id = component.context.get_required_context("account_id", None)?;
+                let folder_id = component.context.get_optional_context("folder_id");
+                let email_id = component.context.get_required_context("email_id", None)?;
+
+                let emails = match provider
+                    .get_emails(
+                        account_id.as_str(),
+                        vec![email_id.as_str()],
+                        folder_id.map(UiViewComponentContextContext::as_str),
+                        None,
+                    )
+                    .await
+                {
+                    Ok(emails) => emails,
+                    Err(_err) => {
+                        anyhow::bail!("failed to get emails.");
+                    }
+                };
+
+                return Ok(ComponentData::EmailMessages(emails));
             }
         }
         _ => {}
@@ -230,7 +305,7 @@ pub async fn get_data(
 }
 
 pub fn create_base_buffer(opts: &OptionOpts) -> anyhow::Result<Buffer> {
-    let in_buffer_list = false;
+    let in_buffer_list = true;
     let is_temporary = true;
     let buffer = match api::create_buf(in_buffer_list, is_temporary) {
         Ok(buffer) => buffer,
@@ -274,7 +349,27 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
         UiViewComponentType::Drawer => render_drawer(component),
         UiViewComponentType::Detail => render_detail(component),
         UiViewComponentType::Preview => render_preview(component),
-        UiViewComponentType::File => render_file(component),
+        UiViewComponentType::File => match data {
+            ComponentData::EmailMessages(email_messages) => {
+                let email_message = if let Some(message) = email_messages.first() {
+                    message.clone()
+                } else {
+                    nvim_oxi::print!("No email message to display.");
+                    return Ok(());
+                };
+
+                let message = Message::<EmailMessage>::new(email_message);
+                match message.to_buffer(&mut buffer, metadata.line_count) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        nvim_oxi::print!("Failed to render email message: {err}");
+                    }
+                }
+            }
+            _ => {
+                nvim_oxi::print!("Message rendering for this component not implemented yet.");
+            }
+        },
         UiViewComponentType::Table => match data {
             ComponentData::Accounts(accounts) => {
                 let table = match Table::<Vec<Account>>::new(accounts)
@@ -317,7 +412,23 @@ pub fn render(component: &UiViewComponent, data: ComponentData) -> anyhow::Resul
                 keymaps.push((Mode::Normal, "<CR>", localized_keymap));
             }
             ComponentData::Emails(emails) => {
-                let table = Table::<Vec<Email>>::new(emails);
+                let table = match Table::<Vec<Email>>::new(emails)
+                    .to_buffer(&mut buffer, metadata.line_count)
+                {
+                    Ok(table) => table,
+                    Err(err) => anyhow::bail!("failed to render emails table: {err}"),
+                };
+
+                let start_line = metadata.line_count + table.offset + 1;
+                let end_line = start_line + table.data.len();
+                let localized_keymap =
+                    create_localized_keymap("MailEmail", start_line, end_line, "No email selected");
+
+                keymaps.push((Mode::Normal, "i", localized_keymap.clone()));
+                keymaps.push((Mode::Normal, "<CR>", localized_keymap));
+            }
+            ComponentData::EmailMessages(email_messages) => {
+                let table = Table::<Vec<EmailMessage>>::new(email_messages);
                 table.to_buffer(&mut buffer, metadata.line_count)?;
             }
             ComponentData::None => {

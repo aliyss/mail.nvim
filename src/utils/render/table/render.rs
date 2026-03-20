@@ -1,8 +1,7 @@
 use std::{fmt::Debug, ops::Deref};
 
 use comfy_table::{
-    Attribute, Cell, ColumnConstraint, Row, Table as ComfyTable,
-    presets::{ASCII_MARKDOWN, UTF8_NO_BORDERS},
+    Attribute, Cell, ColumnConstraint, Row, Table as ComfyTable, presets::ASCII_MARKDOWN,
 };
 use nvim_oxi::api::{self, Buffer};
 use regex::Regex;
