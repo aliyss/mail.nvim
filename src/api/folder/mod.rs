@@ -1,3 +1,4 @@
+use crate::utils::render::table::marked::HasId;
 use crate::utils::render::table::render::{RenderTable, RowBuilder};
 
 pub mod commands;
@@ -63,6 +64,12 @@ impl Folder {
     #[must_use]
     pub fn has_children(&self) -> bool {
         self.has_children
+    }
+}
+
+impl HasId for Folder {
+    fn id(&self) -> &str {
+        self.id.as_str()
     }
 }
 

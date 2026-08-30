@@ -50,6 +50,16 @@ pub fn command_tree() -> Commands {
                         ]),
                     )]),
                 ),
+                (
+                    "userhandhandholding",
+                    Commands::from_iter([(
+                        "set",
+                        Commands::from_iter([
+                            ("true", Commands::default()),
+                            ("false", Commands::default()),
+                        ]),
+                    )]),
+                ),
             ]),
         ),
         (

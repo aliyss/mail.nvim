@@ -1,4 +1,7 @@
 pub mod account;
+pub mod autocomplete;
+pub mod command_tree;
+pub mod completion;
 pub mod config;
 pub mod email;
 pub mod folder;
@@ -10,16 +13,30 @@ use nvim_oxi as nvim;
 
 use nvim::api;
 use nvim::api::opts::CreateCommandOpts;
-use nvim::api::types::CommandArgs;
+use nvim::api::types::{CommandArgs, CommandComplete, CommandNArgs};
+use nvim_oxi::Function;
 
 use account::list::AccountList;
+use config::settings::user_handholding::{UserHandHandHoldingSwitchOn, UserHandHoldingSwitchOn};
 use help::{About, Changelog, Help};
+use ui::view::save::Save;
 use ui::{Close, Open, Refresh, Toggle};
 
 use crate::{
     api::config::ui::view::UiViewComponent,
     commands::{
-        email::{get::EmailGet, list::EmailList},
+        email::{
+            compose::{
+                EmailCreate, EmailForward, EmailReply, EmailReplyAll, EmailSaveAsDraft, EmailSend,
+            },
+            get::EmailGet,
+            list::EmailList,
+            manage::{
+                EmailCopy, EmailDelete, EmailFlagAdd, EmailFlagClear, EmailFlagRemove, EmailMove,
+                EmailToggleRead,
+            },
+            thread::{EmailThread, EmailThreadList, EmailThreadNext, EmailThreadPrevious},
+        },
         folder::list::FolderList,
     },
 };
@@ -58,9 +75,20 @@ where
         None
     }
 
+    /// Completion candidates for the command's arguments.
+    ///
+    /// `arg_lead` is the token currently being completed, `cmd_line` the full
+    /// command line (without the leading colon) and `cursor_pos` the cursor's
+    /// byte position within it. The default returns no candidates.
+    fn complete(_arg_lead: &str, _cmd_line: &str, _cursor_pos: usize) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Create a new user command and register it to Neovim.
     ///
-    /// The default implementation registers a new command with a name and description.
+    /// The default implementation registers a new command with a name and
+    /// description, and wires up live argument completion via
+    /// [`Self::complete`] (a `customlist` completion function).
     ///
     /// # Errors
     ///
@@ -73,8 +101,35 @@ where
     ///
     /// [`nvim_create_user_command`]: https://github.com/neovim/neovim/blob/v0.10.0/src/nvim/api/command.c#L954
     fn register() -> Result<(), api::Error> {
-        let opts = CreateCommandOpts::builder().desc(Self::DESCRIPTION).build();
-        api::create_user_command(Self::NAME.0, Self::callback, &opts)
+        let complete: fn(&str, &str, usize) -> Vec<String> = Self::complete;
+        let opts = CreateCommandOpts::builder()
+            .desc(Self::DESCRIPTION)
+            .nargs(CommandNArgs::Any)
+            .complete(CommandComplete::CustomList(Function::from_fn(
+                move |(arg_lead, cmd_line, cursor_pos): (String, String, usize)| {
+                    complete(&arg_lead, &cmd_line, cursor_pos)
+                },
+            )))
+            .build();
+        let callback: fn(CommandArgs) = Self::callback;
+
+        // Wrap the callback so that a panic cannot unwind across the FFI
+        // boundary and crash (or corrupt) Neovim.
+        api::create_user_command(
+            Self::NAME.0,
+            move |args: CommandArgs| {
+                if let Err(payload) =
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || callback(args)))
+                {
+                    nvim::print!(
+                        "command `{}` panicked: {}",
+                        Self::NAME.as_ref(),
+                        crate::panic_message(payload)
+                    );
+                }
+            },
+            &opts,
+        )
     }
 
     /// The implementation of the command.
@@ -130,6 +185,29 @@ pub(crate) fn register_commands() -> Result<(), api::Error> {
     EmailList::register()?;
     EmailGet::register()?;
 
+    EmailToggleRead::register()?;
+    EmailFlagAdd::register()?;
+    EmailFlagRemove::register()?;
+    EmailFlagClear::register()?;
+    EmailDelete::register()?;
+    EmailMove::register()?;
+    EmailCopy::register()?;
+
+    EmailThread::register()?;
+    EmailThreadList::register()?;
+    EmailThreadNext::register()?;
+    EmailThreadPrevious::register()?;
+
+    EmailCreate::register()?;
+    EmailReply::register()?;
+    EmailReplyAll::register()?;
+    EmailForward::register()?;
+    EmailSend::register()?;
+    EmailSaveAsDraft::register()?;
+
+    UserHandHoldingSwitchOn::register()?;
+    UserHandHandHoldingSwitchOn::register()?;
+
     About::register()?;
     Changelog::register()?;
     Help::register()?;
@@ -138,6 +216,7 @@ pub(crate) fn register_commands() -> Result<(), api::Error> {
     Open::register()?;
     Refresh::register()?;
     Toggle::register()?;
+    Save::register()?;
 
     Ok(())
 }

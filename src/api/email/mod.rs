@@ -8,6 +8,7 @@ use crate::{
     api::contact::Address,
     utils::render::{
         message::render::{InfoEntry, RenderMessage},
+        table::marked::HasId,
         table::render::{RenderTable, RowBuilder},
     },
 };
@@ -68,6 +69,11 @@ impl Email {
     }
 
     #[must_use]
+    pub fn flags(&self) -> &HashSet<EmailFlag> {
+        &self.flags
+    }
+
+    #[must_use]
     pub fn subject(&self) -> &str {
         &self.subject
     }
@@ -93,6 +99,131 @@ impl Email {
     }
 }
 
+impl HasId for Email {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+}
+
+/// The highlight group of an email's subject cell, coding its state:
+/// deleted emails are dimmed, flagged ones yellow, answered ones green and
+/// unread ones bold. The first matching state wins.
+fn subject_style(email: &Email) -> Option<&'static str> {
+    if email.flags.contains(&EmailFlag::Deleted) {
+        Some("MailTableDeleted")
+    } else if email.flags.contains(&EmailFlag::Flagged) {
+        Some("MailTableFlagged")
+    } else if email.flags.contains(&EmailFlag::Answered) {
+        Some("MailTableAnswered")
+    } else if !email.flags.contains(&EmailFlag::Seen) {
+        Some("MailTableUnread")
+    } else {
+        None
+    }
+}
+
+/// The highlight group of an email's attachment cell: emails with attached
+/// files stand out, plain ones stay unstyled.
+fn attachment_style(email: &Email) -> Option<&'static str> {
+    email.has_attachment.then_some("MailTableAttachment")
+}
+
+impl HasId for ThreadedEmail {
+    fn id(&self) -> &str {
+        self.email.id()
+    }
+}
+
+#[cfg(test)]
+mod subject_style_tests {
+    use super::*;
+
+    fn email_with(flags: &[EmailFlag]) -> Email {
+        Email::new(
+            "1".into(),
+            flags.iter().cloned().collect(),
+            "Subject".into(),
+            Mailbox::default(),
+            Mailbox::default(),
+            Utc::now(),
+            false,
+        )
+    }
+
+    fn attached_email() -> Email {
+        Email::new(
+            "1".into(),
+            HashSet::new(),
+            "Subject".into(),
+            Mailbox::default(),
+            Mailbox::default(),
+            Utc::now(),
+            true,
+        )
+    }
+
+    #[test]
+    fn unread_emails_are_bold() {
+        assert_eq!(subject_style(&email_with(&[])), Some("MailTableUnread"));
+    }
+
+    #[test]
+    fn read_emails_have_no_style() {
+        assert_eq!(subject_style(&email_with(&[EmailFlag::Seen])), None);
+    }
+
+    #[test]
+    fn flagged_wins_over_unread() {
+        let email = email_with(&[EmailFlag::Flagged]);
+        assert_eq!(subject_style(&email), Some("MailTableFlagged"));
+    }
+
+    #[test]
+    fn answered_emails_are_green() {
+        let email = email_with(&[EmailFlag::Answered]);
+        assert_eq!(subject_style(&email), Some("MailTableAnswered"));
+    }
+
+    #[test]
+    fn answered_wins_over_unread_but_not_over_flagged() {
+        let answered_unread = email_with(&[EmailFlag::Answered]);
+        assert_eq!(subject_style(&answered_unread), Some("MailTableAnswered"));
+
+        let flagged_answered = email_with(&[EmailFlag::Flagged, EmailFlag::Answered]);
+        assert_eq!(subject_style(&flagged_answered), Some("MailTableFlagged"));
+    }
+
+    #[test]
+    fn deleted_wins_over_everything() {
+        let email = email_with(&[EmailFlag::Deleted, EmailFlag::Flagged]);
+        assert_eq!(subject_style(&email), Some("MailTableDeleted"));
+    }
+
+    #[test]
+    fn attachments_color_the_attachment_cell() {
+        assert_eq!(attachment_style(&email_with(&[])), None);
+        assert_eq!(
+            attachment_style(&attached_email()),
+            Some("MailTableAttachment")
+        );
+    }
+
+    #[test]
+    fn attachment_rows_carry_the_cell_style() {
+        let rows = vec![attached_email()].rows();
+        // Columns: ID, Subject, From, To, Date, Has Attachment, Flags.
+        assert_eq!(rows[0].styles[5], Some("MailTableAttachment"));
+    }
+
+    #[test]
+    fn styled_rows_carry_the_subject_style() {
+        let emails = vec![email_with(&[])];
+        let rows = emails.rows();
+        assert_eq!(rows[0].styles[0], None); // id column
+        assert_eq!(rows[0].styles[1], Some("MailTableUnread")); // subject
+    }
+}
+
 impl RenderTable for Vec<Email> {
     type Item = Email;
 
@@ -113,15 +244,18 @@ impl RenderTable for Vec<Email> {
             .map(|email| {
                 RowBuilder::new()
                     .with_cell(email.id.clone())
-                    .with_cell(email.subject.clone())
+                    .with_cell_styled(email.subject.clone(), subject_style(email))
                     .with_cell(email.from.address.clone())
                     .with_cell(email.to.address.clone())
                     .with_cell(email.date.to_rfc3339())
-                    .with_cell(if email.has_attachment {
-                        "Yes".to_string()
-                    } else {
-                        "No".to_string()
-                    })
+                    .with_cell_styled(
+                        if email.has_attachment {
+                            "Yes".to_string()
+                        } else {
+                            "No".to_string()
+                        },
+                        attachment_style(email),
+                    )
                     .with_cell(
                         email
                             .flags
@@ -225,6 +359,113 @@ impl RenderTable for Vec<Email> {
             ));
         }
         emails
+    }
+}
+
+/// An email together with its indentation level within its thread.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThreadedEmail {
+    depth: usize,
+    email: Email,
+}
+
+impl ThreadedEmail {
+    #[must_use]
+    pub fn new(depth: usize, email: Email) -> Self {
+        Self { depth, email }
+    }
+
+    #[must_use]
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
+
+    #[must_use]
+    pub fn email(&self) -> &Email {
+        &self.email
+    }
+
+    #[must_use]
+    pub fn into_email(self) -> Email {
+        self.email
+    }
+}
+
+impl RenderTable for Vec<ThreadedEmail> {
+    type Item = ThreadedEmail;
+
+    fn headers(&self) -> Vec<String> {
+        vec![
+            "ID".to_string(),
+            "Subject".to_string(),
+            "From".to_string(),
+            "To".to_string(),
+            "Date".to_string(),
+            "Has Attachment".to_string(),
+            "Flags".to_string(),
+        ]
+    }
+
+    fn rows(&self) -> Vec<RowBuilder> {
+        self.iter()
+            .map(|threaded| {
+                let email = &threaded.email;
+                RowBuilder::new()
+                    .with_cell(email.id.clone())
+                    .with_cell_styled(
+                        format!("{}{}", "  ".repeat(threaded.depth), email.subject),
+                        subject_style(email),
+                    )
+                    .with_cell(email.from.address.clone())
+                    .with_cell(email.to.address.clone())
+                    .with_cell(email.date.to_rfc3339())
+                    .with_cell_styled(
+                        if email.has_attachment {
+                            "Yes".to_string()
+                        } else {
+                            "No".to_string()
+                        },
+                        attachment_style(email),
+                    )
+                    .with_cell(
+                        email
+                            .flags
+                            .iter()
+                            .map(|flag| match flag {
+                                EmailFlag::Seen => "Seen".to_string(),
+                                EmailFlag::Answered => "Answered".to_string(),
+                                EmailFlag::Flagged => "Flagged".to_string(),
+                                EmailFlag::Deleted => "Deleted".to_string(),
+                                EmailFlag::Draft => "Draft".to_string(),
+                                EmailFlag::Custom(name) => name.clone(),
+                            })
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                    )
+            })
+            .collect()
+    }
+
+    fn from_headers_and_rows(headers: Vec<String>, rows: Vec<RowBuilder>) -> Self {
+        let emails: Vec<Email> = Vec::<Email>::from_headers_and_rows(headers, rows);
+
+        emails
+            .into_iter()
+            .map(|email| {
+                let depth = email.subject().chars().take_while(|c| *c == ' ').count() / 2;
+                let subject = email.subject().trim_start().to_string();
+                let email = Email::new(
+                    email.id().to_string(),
+                    email.flags().clone(),
+                    subject,
+                    email.from().clone(),
+                    email.to().clone(),
+                    *email.date(),
+                    email.has_attachment(),
+                );
+                ThreadedEmail::new(depth, email)
+            })
+            .collect()
     }
 }
 

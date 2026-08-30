@@ -91,12 +91,19 @@ impl HimalayaProvider {
         himalaya_config: HimalayaTomlAccountConfig,
         email_config: EmailAccountConfig,
         func: F,
+        sending: bool,
     ) -> anyhow::Result<Backend>
     where
         F: Fn(EmailBackendBuilder<ContextBuilder>) -> EmailBackendBuilder<ContextBuilder>,
     {
-        BackendBuilder::new(Arc::new(himalaya_config), Arc::new(email_config), func)
-            .without_sending_backend()
+        let builder = BackendBuilder::new(Arc::new(himalaya_config), Arc::new(email_config), func);
+        let builder = if sending {
+            builder
+        } else {
+            // Reads and mutations never need the SMTP/sendmail backend.
+            builder.without_sending_backend()
+        };
+        builder
             .build()
             .await
             .map_err(|_| anyhow!("failed to build backend"))
@@ -108,7 +115,7 @@ impl HimalayaProvider {
         F: Fn(EmailBackendBuilder<ContextBuilder>) -> EmailBackendBuilder<ContextBuilder>,
     {
         let (himalaya_config, email_config) = self.get_account_config(account_name)?;
-        Self::get_backend_from_config(himalaya_config, email_config, func).await
+        Self::get_backend_from_config(himalaya_config, email_config, func, false).await
     }
 }
 

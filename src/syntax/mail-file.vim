@@ -1,7 +1,6 @@
 syntax clear
 syntax case match
 
-
 " TODO: Add support to directly match the table row values
 syntax match mailFileIDRow      /ID\s*|\zs.\+\ze|/
 syntax match mailFileFromRow    /From\s*|\zs.\+\ze|/
@@ -19,7 +18,6 @@ syntax match mailFileBCCKey     /BCC\ze\s*|/
 syntax match mailFileSubjectKey /Subject\ze\s*|/
 syntax match mailFileDateKey    /Date\ze\s*|/
 
-
 syntax match mailTableBorder /[+\-|]/
 highlight default link mailTableBorder Delimiter
 
@@ -28,15 +26,15 @@ syn region mailTableHeader start="+++" end="+++" fold
 setlocal foldmethod=syntax
 setlocal foldlevel=0
 setlocal foldcolumn=0
-setlocal fillchars=fold:\ 
+setlocal fillchars=fold:\
 
-function! ClearFoldText()
+function! ClearMailFileFoldText()
     let l:line_count = v:foldend - v:foldstart + 1
     let l:text = "+++ Metadata (" . l:line_count . " lines) +++"
     return l:text
 endfunction
 
-setlocal foldtext=ClearFoldText()
+setlocal foldtext=ClearMailFileFoldText()
 
 hi! link mailFileIDRow      Identifier
 hi! link mailFileFromRow    String
@@ -54,6 +52,4 @@ hi! link mailFileSubjectKey Title
 hi! link mailFileDateKey    Constant
 hi! link Folded mailTableHeader
 
-let b:current_syntax = "mail-table"
-
-
+let b:current_syntax = "mail-file"

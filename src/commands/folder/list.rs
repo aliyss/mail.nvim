@@ -3,8 +3,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use nvim_oxi::libuv::AsyncHandle;
-
 use crate::{
     api::{
         config::{
@@ -14,7 +12,7 @@ use crate::{
         file::TryFile,
     },
     commands::prelude::*,
-    utils::render::{ASYNC_RUNTIME, get_context, get_data, render},
+    utils::render::{ASYNC_RUNTIME, get_context, get_data, new_async_handle, render, send_async},
 };
 
 pub struct FolderList;
@@ -35,16 +33,21 @@ impl UserCommand for FolderList {
                 context: Vec::new(),
             },
             layout: None,
+            on_enter: None,
+            link: None,
         })
     }
 
     fn callback(_: CommandArgs) {
         let current_buffer = api::get_current_buf();
 
-        let config = Config::read_from_file(None).expect("failed to read config file");
+        let Ok(config) = Config::read_from_file(None) else {
+            bail!("failed to read config file");
+        };
 
-        let mut view_component =
-            Self::default_view_component().expect("expected default view component to be defined");
+        let Some(mut view_component) = Self::default_view_component() else {
+            bail!("expected default view component to be defined");
+        };
 
         let context = match get_context(Some(current_buffer), &view_component) {
             Ok(context) => context,
@@ -58,7 +61,7 @@ impl UserCommand for FolderList {
         let shared_data = Arc::new(Mutex::new(None));
         let shared_data_for_async = Arc::clone(&shared_data);
 
-        let async_handle = AsyncHandle::new(move || {
+        let Some(async_handle) = new_async_handle(move || {
             let mut lock = shared_data.lock().unwrap();
             if let Some(data) = lock.take() {
                 let component_for_schedule = Arc::clone(&shared_component);
@@ -67,16 +70,14 @@ impl UserCommand for FolderList {
                     let _ = render(&component_info, data);
                 });
             }
-        })
-        .expect("failed to create async handle");
+        }) else {
+            return;
+        };
 
         ASYNC_RUNTIME.spawn(async move {
             if let Ok(data) = get_data(&view_component, &config).await {
                 *shared_data_for_async.lock().unwrap() = Some(data);
-
-                let () = async_handle
-                    .send()
-                    .expect("failed to send async notification to Neovim");
+                send_async(&async_handle);
             }
         });
     }

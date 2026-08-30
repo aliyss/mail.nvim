@@ -1,3 +1,4 @@
+use crate::utils::render::table::marked::HasId;
 use crate::utils::render::table::render::{RenderTable, RowBuilder};
 
 pub mod commands;
@@ -32,6 +33,12 @@ impl Account {
     #[must_use]
     pub fn is_default(&self) -> bool {
         self.default
+    }
+}
+
+impl HasId for Account {
+    fn id(&self) -> &str {
+        self.name.as_str()
     }
 }
 

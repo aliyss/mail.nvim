@@ -17,7 +17,7 @@ impl CreateFolder for HimalayaProvider {
         backend
             .add_folder(folder_name)
             .await
-            .expect("failed to create folder");
+            .map_err(|err| anyhow::anyhow!("failed to create folder: {err}"))?;
 
         Ok(())
     }

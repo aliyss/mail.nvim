@@ -7,13 +7,13 @@ pub mod ui;
 pub use email::{
     Email, EmailBuilder, EmailBuilderError, Format, ViewAs, ViewAsBuilder, ViewAsBuilderError,
 };
-pub use provider::{MailProvider, MailProviderBuilder, MailProviderBuilderError};
+pub use provider::{MailProvider, MailProviderBuilder, MailProviderBuilderError, MailProviderType};
 
 use std::io;
 
 use crate::{
     api::file::TryFile,
-    providers::{Provider, himalaya::HimalayaProvider},
+    providers::{AnyProvider, FakeProvider, HimalayaProvider, Provider},
 };
 
 /// Configuration for all settings within the Mailbox.
@@ -51,14 +51,45 @@ impl Config {
         ConfigBuilder::default()
     }
 
+    /// Whether risky (`!`) actions require confirmation before running.
+    ///
+    /// Enabled by default; disable with
+    /// `:MailConfigUserHandHoldingSwitchOn false`.
+    #[must_use]
+    pub fn user_handholding(&self) -> bool {
+        self.user_handholding.unwrap_or(true)
+    }
+
+    /// Whether extra risky (`!!`) actions require confirmation before running.
+    ///
+    /// Enabled by default; disable with
+    /// `:MailConfigUserHandHandHoldingSwitchOn false`.
+    #[must_use]
+    pub fn user_handhandholding(&self) -> bool {
+        self.user_handhandholding.unwrap_or(true)
+    }
+
+    /// Enables or disables confirmation for risky (`!`) actions.
+    pub fn set_user_handholding(&mut self, enabled: bool) {
+        self.user_handholding = Some(enabled);
+    }
+
+    /// Enables or disables confirmation for extra risky (`!!`) actions.
+    pub fn set_user_handhandholding(&mut self, enabled: bool) {
+        self.user_handhandholding = Some(enabled);
+    }
+
     /// Create a provider from the configuration.
     ///
     /// # Errors
     /// Returns an error if the provider could not be created.
     pub fn to_provider(&self) -> Result<impl Provider, anyhow::Error> {
-        // TODO: Requires so that we can support multiple providers, but based on the Provider
-        // trait... we have an issue with the arguments see DeleteFolder for example.
-        Ok(HimalayaProvider::from_config(self)?)
+        match self.mail_provider.provider_type {
+            MailProviderType::Himalaya => Ok(AnyProvider::Himalaya(HimalayaProvider::from_config(
+                self,
+            )?)),
+            MailProviderType::Fake => Ok(AnyProvider::Fake(FakeProvider)),
+        }
     }
 }
 
@@ -163,6 +194,90 @@ mod tests {
             .expect("expected hard-coded configuration to be valid");
 
         assert_eq!(config.email, Some(email));
+    }
+
+    #[test]
+    fn user_handholding_defaults_to_enabled() {
+        let config = Config::builder()
+            .build()
+            .expect("expected default builder to be valid");
+
+        assert!(config.user_handholding());
+        assert!(config.user_handhandholding());
+    }
+
+    #[test]
+    fn user_handholding_can_be_disabled() {
+        let mut config = Config::builder()
+            .build()
+            .expect("expected default builder to be valid");
+
+        config.set_user_handholding(false);
+        config.set_user_handhandholding(false);
+
+        assert!(!config.user_handholding());
+        assert!(!config.user_handhandholding());
+    }
+
+    #[test]
+    fn user_handholding_survives_round_trip() {
+        let mut config = Config::builder()
+            .build()
+            .expect("expected default builder to be valid");
+        config.set_user_handholding(false);
+
+        let json = serde_json::to_string(&config).expect("config should serialize");
+        let decoded: Config = serde_json::from_str(&json).expect("config should parse");
+
+        assert!(!decoded.user_handholding());
+        assert!(decoded.user_handhandholding());
+    }
+
+    #[test]
+    fn fake_provider_type_builds_the_fake_provider() {
+        use crate::api::account::commands::ListAccounts;
+
+        let config = Config::builder()
+            .mail_provider(
+                MailProvider::builder()
+                    .provider_type(MailProviderType::Fake)
+                    .build()
+                    .expect("expected fake mail provider to be valid"),
+            )
+            .build()
+            .expect("expected fake configuration to be valid");
+
+        let provider = config
+            .to_provider()
+            .expect("expected the fake provider to be created");
+
+        let accounts = provider
+            .list_accounts()
+            .expect("expected the fake accounts to list");
+        assert!(
+            accounts.iter().any(|account| account.name() == "nic@example.com"),
+            "expected the fake provider to serve its fake accounts"
+        );
+    }
+
+    #[test]
+    fn fake_provider_type_survives_a_round_trip() {
+        let config = Config::builder()
+            .mail_provider(
+                MailProvider::builder()
+                    .provider_type(MailProviderType::Fake)
+                    .build()
+                    .expect("expected fake mail provider to be valid"),
+            )
+            .build()
+            .expect("expected fake configuration to be valid");
+
+        let json = serde_json::to_string(&config).expect("config should serialize");
+        let decoded: Config = serde_json::from_str(&json).expect("config should parse");
+        assert_eq!(
+            decoded.mail_provider.provider_type,
+            MailProviderType::Fake
+        );
     }
 
     #[test]

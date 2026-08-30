@@ -20,7 +20,7 @@ impl ListFolders for HimalayaProvider {
             backend
                 .list_folders()
                 .await
-                .expect("failed to list folders"),
+                .map_err(|err| anyhow::anyhow!("failed to list folders: {err}"))?,
         );
 
         Ok(folders.iter().map(|folder| folder.clone().into()).collect())

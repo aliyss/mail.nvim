@@ -137,15 +137,15 @@ All commands related to configuring mail.nvim and himalaya.
 
 | MailConfig Commands                                            | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailConfig`                            | 🛠️ | Open the Mail Configuration Wizard                | |
-| `:MailConfigFile`                        | 🛠️ | Open the Mail Configuration File                  | |
+| `:MailConfig`                            | ❌ | Open the Mail Configuration Wizard                | |
+| `:MailConfigFile`                        | ❌ | Open the Mail Configuration File                  | |
 | `:MailConfigLocation`                    | ❌ | Set the location of the Mail Configuration        | dir |
 | `:MailConfigHimalayaFile`                | ❌ | Open the Himalaya Configuration File              | |
 | `:MailConfigHimalayaFileLocationSet`     | ❌ | Set the location of the Himalaya Configuration    | dir |
 | `:MailConfigHimalayaFileLocationReset`   | ❌ | Set the location of the Himalaya Configuration    | |
 | `:MailConfigEmailViewAsCommandSet`       | ❌ | Set the command to view email with a format       | format:(plain,html,...), command, capture_output?:t |
-| `:MailConfigUserHandHoldingSwitchOn`     | ❌ | Risky actions require confirmation                | t/f |
-| `:MailConfigUserHandHandHoldingSwitchOn` | ❌ | Risky Risky actions require confirmation          | t/f |
+| `:MailConfigUserHandHoldingSwitchOn`     | 🛠️ | Risky actions require confirmation                | t/f |
+| `:MailConfigUserHandHandHoldingSwitchOn` | 🛠️ | Extra risky actions require confirmation          | t/f |
 
 
 ### Mail Help
@@ -154,11 +154,11 @@ All commands related to getting help about mail.nvim. As well as information abo
 
 | MailHelp Commands                                              | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailHelp`                              | ❌ | help                                              | |
+| `:MailUIHelp`                            | 🛠️ | help                                              | |
 | `:MailKeybindings`                       | ❌ | keybindings                                       | |
-| `:MailAbout`                             | ❌ | about information                                 | |
-| `:MailChangelog`                         | ❌ | changelog                                         | |
-| `:MailLicense`                           | ❌ | license                                           | |
+| `:MailUIAbout`                           | 🛠️ | about information                                 | |
+| `:MailUIChangelog`                       | 🛠️ | changelog                                         | |
+| `:MailUILicense`                         | ❌ | license                                           | |
 | `:MailContribute`                        | ❌ | contribute information                            | |
 | `:MailSupport`                           | ❌ | support information                               | |
 | `:MailIssueReport`                       | ❌ | Open the mail.nvim issue tracker                  | |
@@ -171,17 +171,17 @@ All commands related to the Mail UI, views and components.
 
 | MailUI Commands                                                | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailUI`                                | ❌ | Open the MailUI                                   | view?:dv |
-| `:MailUIToggle`                          | ❌ | Toggle the MailUI                                 | (tags?, components?)?:cv |
-| `:MailUIRefresh`                         | ❌ | Refresh the component contents                    | (tags?, components?)?:cc |
-| `:MailUIClose`                           | ❌ | Close the MailUI                                  | |
+| `:MailUI`                                | 🛠️ | Open the MailUI                                   | view?:dv |
+| `:MailUIToggle`                          | 🛠️ | Toggle the MailUI                                 | (tags?, components?)?:cv |
+| `:MailUIRefresh`                         | 🛠️ | Refresh the component contents                    | (tags?, components?)?:cc |
+| `:MailUIClose`                           | 🛠️ | Close the MailUI                                  | |
 
 
 | MailUIView Commands                                            | Status | Description | Flags |
 |---|:---:|---|---|
 | `:MailUIViewConfigFile`                  | ❌ | Open the view config file                         | view?:cv|
 | `:MailUIViewList`                        | ❌ | List all saved views                              | |
-| `:MailUIViewSave`                        | ❌ | Save the current view                             | tbd (open buffer positions, names...) |
+| `:MailUIViewSave`                        | 🛠️ | Save the current view to `~/.local/share/mail_nvim/views/<name>.json` | name? |
 | `:MailUIViewReset`                       | ❌ | Reset the current view in case layout changed     | |
 | `:MailUIViewDelete`                      | ❌ | Delete a saved view                               | view?:cv!! |
 | `:MailUIViewDefaultSet`                  | ❌ | Set the default view                              | view?:cv! |
@@ -200,13 +200,94 @@ All commands related to the Mail UI, views and components.
 | `:MailUIViewComponentTagClear`           | ❌ | Clear all tags of a component in a view           | component?:cc |
 
 
+### File-driven views
+
+The Mail UI layout is described by a JSON view file. When `:MailUI` is run, the
+default view at `~/.local/share/mail_nvim/views/default.json` is applied; when
+that view has no components, the classic drawer is opened instead. A saved view
+can be reloaded from any snippet in `~/.local/share/mail_nvim/views/`.
+
+No default view exists yet? One is created automatically: the
+[Outlook-style layout below](#file-driven-views) for your default account (or
+first configured account), persisted to `views/default.json` so you can tweak
+it. This also happens when `:MailUI` was run before any account was configured
+and the empty fallback was saved: the empty view is regenerated from the
+current accounts instead of opening the drawer.
+
+Components are laid out left to right as vertical panes. The width can be a
+percentage of the remaining space (`"size_as_percentage": true`) or a fixed
+number of columns. The rightmost pane fills whatever is left.
+
+A starter Outlook-style three-pane layout (folder tree, email list, reading
+pane) looks like this — fill in your own `account_id`/`folder_id`:
+
+```json
+{
+  "name": "Outlook",
+  "components": [
+    {
+      "id": "folders",
+      "name": "Folders",
+      "component_type": "drawer",
+      "context": { "command_group": "Account", "command_type": "List", "arguments": {}, "context": [] },
+      "layout": { "position": "left", "content_scrollable": [true, true], "location": [0, 0], "size": [30, null], "size_as_percentage": true }
+    },
+    {
+      "id": "emails",
+      "name": "Emails",
+      "component_type": "list",
+      "context": { "command_group": "Email", "command_type": "List", "arguments": { "limit": 50 }, "context": [{ "account_id": "you@example.com", "folder_id": "INBOX" }] },
+      "on_enter": "new_window",
+      "link": { "target": "reading" },
+      "layout": { "position": "center", "content_scrollable": [true, true], "location": [0, 0], "size": [50, null], "size_as_percentage": true }
+    },
+    {
+      "id": "reading",
+      "name": "Reading Pane",
+      "component_type": "content",
+      "context": { "command_group": "Email", "command_type": "Get", "arguments": {}, "context": [{ "account_id": "you@example.com", "folder_id": "INBOX", "email_id": "1" }] },
+      "layout": { "position": "right", "content_scrollable": [true, true], "location": [0, 0], "size": [0, null], "size_as_percentage": false }
+    }
+  ]
+}
+```
+
+#### Enter actions
+
+Pressing `<CR>` (or `o`/`i`) on a row runs the component's `on_enter` action:
+
+- `expand_view` — expand the node under the cursor in place (the drawer's
+default: account -> folders, folder -> actions);
+- `replace_view` — replace the current pane with the selected row's content
+(drill down);
+- `new_window` — open the selected row's content in a new window to the
+right (the default for email lists and threads).
+
+When `on_enter` is omitted it is inferred from the component type: drawers
+`expand_view`, email lists/threads `new_window`, everything else
+`expand_view`. The action can always be overridden per component.
+
+#### Linked panes (reading pane)
+
+Setting `"link": { "target": "<component id>" }` on a list turns it into a
+live preview: as the cursor moves over the rows, the linked pane is
+re-rendered (debounced) with the selected row's content, without stealing
+focus. In the example above the email list is linked to the `reading` pane,
+so moving through the inbox shows each email in the reading pane; pressing
+`<CR>` still opens the email in a new window.
+
+The easiest way to author a view is to open the panes you want and run
+`:MailUISave <name>`: it captures every open mail buffer (and its metadata,
+including account/folder/email context) into `views/<name>.json`.
+
+
 ### Mail Management
 
 All commands related to managing mail accounts, folders, emails, threads, templates and tags.
 
 | MailAccount Commands                                           | Status | Description | Flags |
 |---|:---:|---|---|
-| `:MailAccount`                           | 🛠️ | Show the details to the mail account              | account?:cda |
+| `:MailAccount`                           | ❌ | Show the details to the mail account              | account?:cda |
 | `:MailAccountList`                       | 🛠️ | List all configured mail accounts                 | |
 | `:MailAccountAdd`                        | ❌ | Add a mail account                                | tbd (defined by himalaya) |
 | `:MailAccountEdit`                       | ❌ | Edit a mail account                               | account?:cda |
@@ -216,13 +297,13 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 
 | MailFolder Commands                                            | Status | Description | Flags (+account?:cda) |
 |---|:---:|---|---|
-| `:MailFolder`                            | 🛠️ | Show the details to the mail folder               | folder?:cf |
+| `:MailFolder`                            | ❌ | Show the details to the mail folder               | folder?:cf |
 | `:MailFolderList`                        | 🛠️ | List all folders in a mail account                | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailFolderCreate`                      | 🛠️ | Create a mail folder                              | tbd (defined by himalaya) |
+| `:MailFolderCreate`                      | ❌ | Create a mail folder                              | tbd (defined by himalaya) |
 | `:MailFolderRename`                      | ❌ | Rename a mail folder                              | folder?:cf |
-| `:MailFolderExpunge`                     | 🛠️ | Expunge a mail folder                             | folder?:cf!! |
-| `:MailFolderPurge`                       | 🛠️ | Purge a mail folder                               | folder?:cf!! |
-| `:MailFolderDelete`                      | 🛠️ | Delete a mail folder                              | folder?:cf!! |
+| `:MailFolderExpunge`                     | ❌ | Expunge a mail folder                             | folder?:cf!! |
+| `:MailFolderPurge`                       | ❌ | Purge a mail folder                               | folder?:cf!! |
+| `:MailFolderDelete`                      | ❌ | Delete a mail folder                              | folder?:cf!! |
 | `:MailFolderDefaultInboxSet`             | ❌ | Set the default inbox folder                      | folder?:cf!|
 | `:MailFolderDefaultInboxReset`           | ❌ | Reset the default inbox folder                    | folder?:cf! |
 | `:MailFolderDefaultDraftSet`             | ❌ | Set the default draft folder                      | folder?:cf! |
@@ -233,34 +314,34 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 
 | MailEmail Commands                                             | Status | Description | Flags (+account?:cda, +folder?:cdf)          |
 |---|:---:|---|---|
-| `:MailEmail`                             | ❌ | Show the details to an email                      | email?:ce, mark_read?:t |
+| `:MailEmail`                             | 🛠️ | Show the details to an email                      | email?:ce, mark_read?:t |
 | `:MailEmailList`                         | 🛠️ | List emails of a folder                           | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailEmailCreate`                       | ❌ | Create a new email                                | tbd (defined by himalaya) |
-| `:MailEmailSend`                         | ❌ | Send an email                                     | email?:ce! |
-| `:MailEmailReply`                        | ❌ | Reply to an email                                 | email?:ce |
-| `:MailEmailReplyAll`                     | ❌ | Reply All to an email                             | email?:ce |
-| `:MailEmailForward`                      | ❌ | Forward an email                                  | email?:ce |
+| `:MailEmailCreate`                       | 🛠️ | Create a new email                                | |
+| `:MailEmailSend`                         | 🛠️ | Send the email in the current compose buffer      | |
+| `:MailEmailReply`                        | 🛠️ | Reply to an email                                 | email?:ce |
+| `:MailEmailReplyAll`                     | 🛠️ | Reply All to an email                             | email?:ce |
+| `:MailEmailForward`                      | 🛠️ | Forward an email                                  | email?:ce |
 | `:MailEmailDiscard`                      | ❌ | Discard an email                                  | email?:ce! |
 | `:MailEmailExport`                       | ❌ | Export an email                                   | email?:ce, dir?:nmd, format?:plain |
 | `:MailEmailViewAs`                       | ❌ | View an email                                     | email?:ce, format?:plain, mark_read?:f |
-| `:MailEmailSaveAsDraft`                  | ❌ | Save an email as draft                            | email?:ce, storage?:(folder?:ddf/dir?:nmd) |
+| `:MailEmailSaveAsDraft`                  | 🛠️ | Save the current compose buffer as a draft        | |
 | `:MailEmailSaveAsTemplate`               | ❌ | Save an email as template                         | email?:ce |
-| `:MailEmailFlagAdd`                      | ❌ | Add a flag to an email                            | email?:ce, flag |
-| `:MailEmailFlagRemove`                   | ❌ | Remove a flag from an email                       | email?:ce, flag |
-| `:MailEmailFlagClear`                    | ❌ | Clear all flags from an email                     | email?:ce! |
-| `:MailEmailToggleRead`                   | ❌ | Mark emails as read                               | email[]?:ce, mark_read?:(null/t/f) |
-| `:MailEmailMove`                         | ❌ | Move emails to another folder                     | email[]?:ce, to_folder?:folder! |
-| `:MailEmailCopy`                         | ❌ | Copy emails to another folder                     | email[]?:ce, to_folder?:folder! |
+| `:MailEmailFlagAdd`                      | 🛠️ | Add a flag to an email                            | email?:ce, flag |
+| `:MailEmailFlagRemove`                   | 🛠️ | Remove a flag from an email                       | email?:ce, flag |
+| `:MailEmailFlagClear`                    | 🛠️ | Clear all flags from an email                     | email?:ce! |
+| `:MailEmailToggleRead`                   | 🛠️ | Mark emails as read                               | email[]?:ce, mark_read?:(null/t/f) |
+| `:MailEmailMove`                         | 🛠️ | Move emails to another folder                     | email[]?:ce, to_folder?:folder! |
+| `:MailEmailCopy`                         | 🛠️ | Copy emails to another folder                     | email[]?:ce, to_folder?:folder! |
 | `:MailEmailAttachmentsDownload`          | ❌ | Download attachments of emails                    | email[]?:ce, dir?:nmd |
-| `:MailEmailDelete`                       | ❌ | Delete emails                                     | email[]?:ce!! |
+| `:MailEmailDelete`                       | 🛠️ | Delete emails                                     | email[]?:ce!! |
 
 
 | MailEmailThread Commands                                       | Status | Description | Flags (+account?:cda, +folder?:cdf, +email?:ce) |
 |---|:---:|---|---|
-| `:MailEmailThread`                       | ❌ | Show the details to a thread                      | thread?:cet, mark_read?:t |
-| `:MailEmailThreadList`                   | ❌ | List threads of an email                          | pagination?:t=>(page?:0, limit?:bh)=>limit? |
-| `:MailEmailThreadNext`                   | ❌ | Go to the next email in the thread                | thread?:cet |
-| `:MailEmailThreadPrevious`               | ❌ | Go to the previous email in the thread            | thread?:cet |
+| `:MailEmailThread`                       | 🛠️ | Show the details to a thread                      | thread?:cet, mark_read?:t |
+| `:MailEmailThreadList`                   | 🛠️ | List threads of an email                          | pagination?:t=>(page?:0, limit?:bh)=>limit? |
+| `:MailEmailThreadNext`                   | 🛠️ | Go to the next email in the thread                | thread?:cet |
+| `:MailEmailThreadPrevious`               | 🛠️ | Go to the previous email in the thread            | thread?:cet |
 | `:MailEmailThreadExport`                 | ❌ | Export emails in the thread                       | thread?:cet, dir?:nmd, format?:plain |
 | `:MailEmailThreadMarkRead`               | ❌ | Mark emails in the thread as read                 | thread?:cet, ignore_emails[]? |
 | `:MailEmailThreadMove`                   | ❌ | Move emails in the thread to another folder       | thread?:cet, to_folder?:folder |
@@ -292,6 +373,97 @@ All commands related to managing mail accounts, folders, emails, threads, templa
 
 
 ## Additional Features
+
+### Composing and sending
+
+`:MailEmailCreate` opens an empty compose buffer addressed from the account
+of the current buffer (or the default account); `:MailEmailReply` (or
+`:MailEmailReplyAll`/`:MailEmailForward`) pre-fills it with the recipients, a
+`Re:`/`Fwd:` subject and the original message (quoted for replies, wrapped in
+a forwarded-message header for forwards). The buffer's `To:`/`Cc:`/`Bcc:`/
+`Subject:` block and the body below it are yours to edit; `:MailEmailSend`
+builds a raw message from them and delivers it through the account's sending
+backend, closing the compose buffer on success. `:MailEmailSaveAsDraft`
+stores the (possibly unfinished) message in the account's drafts folder with
+the `Draft` flag instead of sending it.
+
+### Multi-select
+
+In any email list or thread, press `<Space>` to toggle the email under the
+cursor (and step down so you can keep selecting) and `u` to clear the
+selection. The mutating commands (`:MailEmailDelete`, `:MailEmailMove`,
+`:MailEmailCopy`, `:MailEmailToggleRead`, flag commands) then apply to every
+selected email; with no selection they apply to the email under the cursor.
+
+### Live autocomplete
+
+Command arguments autocomplete live as you type (`<Tab>` on the command
+line). The candidates depend on the command and, when relevant, on the
+arguments before it:
+
+- `:MailEmailMove`/`:MailEmailCopy` complete folder names — of the account
+  typed as a previous argument, or of the account of the current buffer;
+- `:MailEmailFlagAdd`/`:MailEmailFlagRemove` complete the flag name
+  (`seen`, `answered`, `flagged`, `deleted`, `draft`);
+- `:MailEmail` completes the email ids of the current folder;
+- `:MailEmailToggleRead` and `:MailConfigUserHandHoldingSwitchOn`/
+  `:MailConfigUserHandHandHoldingSwitchOn` complete the `t`/`f` argument.
+
+Folder and email ids come from what has been loaded so far (a folder or email
+listing caches its ids), so the completion stays fast and reflects the data
+you have actually fetched.
+
+### Loading spinners
+
+While an asynchronous operation is in flight — expanding an account in the
+drawer, opening a folder or an email — the pane where the action was
+triggered shows a turning braille spinner (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`): on the
+drawer node that was activated, or in the `Sel` column of the table row that
+was clicked. Only the spinner cell is rewritten, so the rest of the pane
+stays untouched; it is removed as soon as the data arrives (or the fetch
+fails).
+
+Every list table has a `Sel` column so the spinner always has a home: emails
+and threads use it for the multi-select marker, while accounts and folders
+get the column too (empty) even though they do not support multi-select yet.
+
+### Fake provider
+
+For development and demos, the plugin can serve deterministic fake data
+through the *same* async pipeline as a real Himalaya account — every fetch
+(spawned on the async runtime, answered after a ~0.5s fake network delay,
+rendered back on the main thread) behaves exactly as with a real backend, but
+never touches the network. This is what the tests use.
+
+To switch a running installation to it, set the provider type in the config
+(`~/.local/share/mail_nvim/config.json`):
+
+```json
+{ "mail_provider": { "provider_type": "Fake" } }
+```
+
+The fake provider serves the accounts `nic@example.com` and
+`bob@example.com` (with `INBOX`, `INBOX.Sent`, `Archive`, ... folders and a
+paginated inbox), so the whole UI — drawer, lists, reading pane, threads,
+mutations — can be exercised without touching a real mailbox. The tests in
+`src/tests/fake.rs` drive these flows end to end.
+
+### User handholding
+
+Risky actions ask for confirmation before running. The README marks them with
+`!` (risk) and `!!` (high risk), and two settings control the confirmation:
+
+- `:MailConfigUserHandHoldingSwitchOn t|f` — risky actions
+  (`:MailEmailMove`, `:MailEmailCopy`, `:MailEmailFlagClear`) require
+  confirmation;
+- `:MailConfigUserHandHandHoldingSwitchOn t|f` — extra risky actions
+  (`:MailEmailDelete`) require confirmation.
+
+Both are enabled by default. When confirmed, a popup summarizes the action
+(e.g. "Delete 3 email(s)?") and offers `y`/`<CR>` to run it and `n`/`q`/`<Esc>`
+to cancel; the popup never steals the buffer focus permanently and declining
+leaves the email selection intact. Extra risky actions also confirm when only
+user handholding is enabled.
 
 ### Render Email HTML
 When viewing an email, you can toggle between different views by using `:MailEmailViewAs`. This however requires you to have the different type of viewer installed. You can set any command you want to use to view an email by using the following command:

@@ -1,6 +1,7 @@
 use crate::api::contact::{Address, Contact};
 use std::collections::HashSet;
 
+use email::envelope::flag::Flag;
 use email::message::Message as HimalayaMessage;
 
 use pimalaya_tui::himalaya::config::{
@@ -10,8 +11,41 @@ use pimalaya_tui::himalaya::config::{
 use crate::api::email::{Email, EmailFlag, EmailMessage, Mailbox};
 use chrono::{DateTime, Utc};
 
+mod flag;
 mod get;
 mod list;
+mod message;
+mod send;
+mod thread;
+
+impl From<EmailFlag> for Flag {
+    fn from(flag: EmailFlag) -> Self {
+        match flag {
+            EmailFlag::Seen => Flag::Seen,
+            EmailFlag::Answered => Flag::Answered,
+            EmailFlag::Flagged => Flag::Flagged,
+            EmailFlag::Deleted => Flag::Deleted,
+            EmailFlag::Draft => Flag::Draft,
+            EmailFlag::Custom(custom) => Flag::Custom(custom),
+        }
+    }
+}
+
+/// Converts email ids into the numeric representation expected by the
+/// Himalaya backend.
+///
+/// # Errors
+///
+/// Returns an error if an id cannot be parsed as a number.
+pub(super) fn email_ids_to_usize(email_ids: &[&str]) -> anyhow::Result<Vec<usize>> {
+    email_ids
+        .iter()
+        .map(|id| {
+            id.parse::<usize>()
+                .map_err(|err| anyhow::anyhow!("failed to parse email id '{id}' as usize: {err}"))
+        })
+        .collect()
+}
 
 impl From<HimalayaEnvelopeFlag> for EmailFlag {
     fn from(flag: HimalayaEnvelopeFlag) -> Self {
@@ -32,6 +66,49 @@ impl From<HimalayaMailbox> for Mailbox {
             name: mailbox.name,
             address: mailbox.addr,
         }
+    }
+}
+
+impl From<email::envelope::Flag> for EmailFlag {
+    fn from(flag: email::envelope::Flag) -> Self {
+        match flag {
+            email::envelope::Flag::Seen => EmailFlag::Seen,
+            email::envelope::Flag::Answered => EmailFlag::Answered,
+            email::envelope::Flag::Flagged => EmailFlag::Flagged,
+            email::envelope::Flag::Deleted => EmailFlag::Deleted,
+            email::envelope::Flag::Draft => EmailFlag::Draft,
+            email::envelope::Flag::Custom(custom) => EmailFlag::Custom(custom),
+        }
+    }
+}
+
+/// Converts a thread envelope into its API representation.
+impl From<email::envelope::Envelope> for Email {
+    fn from(envelope: email::envelope::Envelope) -> Self {
+        let date = envelope.date.with_timezone(&Utc);
+
+        let flags = envelope
+            .flags
+            .iter()
+            .cloned()
+            .map(EmailFlag::from)
+            .collect::<HashSet<_>>();
+
+        Email::new(
+            envelope.id,
+            flags,
+            envelope.subject,
+            Mailbox {
+                name: envelope.from.name,
+                address: envelope.from.addr,
+            },
+            Mailbox {
+                name: envelope.to.name,
+                address: envelope.to.addr,
+            },
+            date,
+            envelope.has_attachment,
+        )
     }
 }
 

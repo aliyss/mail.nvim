@@ -34,6 +34,7 @@ impl ListEmails for HimalayaProvider {
                     .without_features()
                     .with_list_envelopes(BackendFeatureSource::Context)
             },
+            false,
         )
         .await?;
 
@@ -46,7 +47,7 @@ impl ListEmails for HimalayaProvider {
         let emails = backend
             .list_envelopes(&email_folder_id, list_email_options)
             .await
-            .expect("failed to list emails");
+            .map_err(|err| anyhow::anyhow!("failed to list emails: {err}"))?;
 
         Ok(emails.iter().map(|email| email.clone().into()).collect())
     }

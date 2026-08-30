@@ -8,6 +8,9 @@ use std::path::PathBuf;
 pub enum MailProviderType {
     #[default]
     Himalaya,
+    /// A provider that serves deterministic fake data through the same async
+    /// pipeline as the real one, used by the tests (and handy for demos).
+    Fake,
 }
 
 /// `Email` configuration options.
@@ -42,19 +45,23 @@ impl MailProviderBuilder {
     fn mail_provider_id_default(&self) -> String {
         let id = match self.provider_type {
             MailProviderType::Himalaya => "himalaya",
+            MailProviderType::Fake => "fake",
         };
 
         id.to_string()
     }
 
     fn mail_provider_location_default(&self) -> Result<PathBuf, String> {
-        let project_dirs = match self.provider_type {
-            MailProviderType::Himalaya => ProjectDirs::from("com", "pimalaya", "himalaya"),
-            // MailProviderType::Other => ProjectDirs::from("foo", "bar", "baz"),
-        }
-        .ok_or_else(|| "failed to get configuration directory".to_owned())?;
+        let path = ProjectDirs::from("com", "pimalaya", "himalaya")
+            .ok_or_else(|| "failed to get configuration directory".to_owned())?
+            .config_dir()
+            .to_owned();
 
-        let path = project_dirs.config_dir();
+        // The fake provider never reads a configuration file, so it does not
+        // need the himalaya directory to exist.
+        if matches!(self.provider_type, MailProviderType::Fake) {
+            return Ok(path);
+        }
 
         if !path.exists() {
             // TODO: Create the directory and start the himalaya configuration wizard.
@@ -62,15 +69,15 @@ impl MailProviderBuilder {
         } else if !path.is_dir() {
             Err(format!("expected path to directory: {:#}", path.display()))
         } else {
-            Ok(path.to_owned())
+            Ok(path)
         }
     }
 
+    #[expect(
+        clippy::unused_self,
+        reason = "this pattern is recommended by the derive_builder documentation"
+    )]
     fn mail_provider_location_file_name(&self) -> PathBuf {
-        let file_name = match self.provider_type {
-            MailProviderType::Himalaya => "config.toml",
-        };
-
-        PathBuf::from(file_name)
+        PathBuf::from("config.toml")
     }
 }

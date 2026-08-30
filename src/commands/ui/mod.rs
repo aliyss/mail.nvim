@@ -1,4 +1,5 @@
 mod close;
+pub mod drawer;
 mod open;
 mod refresh;
 mod toggle;
@@ -9,56 +10,47 @@ pub use open::Open;
 pub use refresh::Refresh;
 pub use toggle::Toggle;
 
-use std::sync::{LazyLock, RwLock};
+use std::collections::HashMap;
 
-use nvim_oxi as nvim;
+use nvim_oxi::Object;
+use nvim_oxi::api::opts::{OptionOpts, OptionScope, SetKeymapOpts};
+use nvim_oxi::api::types::Mode;
+use nvim_oxi::api::{self, Buffer};
 
-use nvim::Object;
-use nvim::api::opts::{OptionOpts, OptionScope};
-use nvim::api::{self, Buffer};
+use crate::api::config::ui::view::{UiViewComponent, UiViewComponentContext, UiViewComponentType};
+use crate::utils::buffer::metadata::BufferMetadata;
+use crate::utils::buffer::render::FromBuffer;
 
-use crate::bail;
-
-pub static STATE: LazyLock<RwLock<State>> = LazyLock::new(|| RwLock::new(State::default()));
-
-/// Represents internal information that can be shared between function calls.
-#[derive(Debug, Clone, Default)]
-pub struct State {
-    /// Whether the extended help message is being displayed.
-    pub display_help: bool,
-}
-
-// Technically, there is no difference between `pub` and `pub(crate)` since the consumer of this
-// library is Lua, not Rust. However, semantically, I'm using `pub` to indicate the function
-// is intended to be exported by the main dictionary in `lib.rs`, while `pub(crate)` indicates
-// it is just an internal helper function.
-
-/// Hide or reveal the extended help message.
-#[deny(dead_code, reason = "should be added to the Dictionary in lib.rs")]
-pub fn toggle_help(_: Object) {
-    match STATE.write() {
-        Ok(mut state) => {
-            state.display_help = !state.display_help;
-        }
-        Err(err) => bail!("failed to acquire lock: {err}"),
+/// The component rendered into the Mail UI drawer: the account list.
+#[must_use]
+pub(crate) fn drawer_component() -> UiViewComponent {
+    UiViewComponent {
+        id: "mail-ui-drawer".into(),
+        name: "Accounts".into(),
+        component_type: UiViewComponentType::Drawer,
+        context: UiViewComponentContext {
+            command_group: "Account".into(),
+            command_type: "List".into(),
+            arguments: HashMap::new(),
+            context: Vec::new(),
+        },
+        layout: None,
+        on_enter: None,
+        link: None,
     }
-
-    let Some(mut buffer) = get_drawer_buffer() else {
-        bail!("failed to get Mail UI buffer");
-    };
-
-    render(&mut buffer);
 }
 
 /// Checks if `buffer` has the properties expected of the Mail UI drawer.
 pub(crate) fn is_drawer(buffer: Buffer) -> bool {
     let opts = OptionOpts::builder()
         .scope(OptionScope::Local)
-        .buffer(buffer)
+        .buf(buffer)
         .build();
 
     let value = api::get_option_value::<String>("filetype", &opts);
-    value.is_ok_and(|filetype| &filetype == "mail-ui")
+    // `mail-ui` is set when the drawer is created, `mail-drawer` once the
+    // drawer component has been rendered into it.
+    value.is_ok_and(|filetype| matches!(filetype.as_str(), "mail-ui" | "mail-drawer"))
 }
 
 /// Loops through the open buffers to find the Mail UI drawer.
@@ -66,34 +58,95 @@ pub(crate) fn get_drawer_buffer() -> Option<Buffer> {
     api::list_bufs().find(|buffer| is_drawer(buffer.clone()))
 }
 
-/// Writes content into the target `buffer`.
-//
-// XXX(Nic): This function can abstract away the logic for unlocking the buffer to allow writing
-// to it, but the actual contents should be generated using a view. We need to make a trait
-// for Views so this can be turned into a generic.
-pub(crate) fn render(buffer: &mut Buffer) {
-    let mut replacement = vec!["Press ? for help", ""];
+/// Checks whether any mail UI buffer (the drawer or a rendered view
+/// component) is currently open.
+pub(crate) fn has_open_mail_buffer() -> bool {
+    api::list_bufs().any(|buffer| {
+        is_drawer(buffer.clone()) || BufferMetadata::from_buffer(&buffer, None).is_ok()
+    })
+}
 
-    let Ok(state) = STATE.read() else {
-        bail!("failed to acquire lock");
-    };
-
-    if state.display_help {
-        replacement.push("q - Exit");
-        replacement.push("");
-    }
+/// Configures `buffer` as a Mail UI drawer pane: options, filetype and the
+/// drawer navigation keymaps.
+///
+/// # Errors
+///
+/// Returns an error if an option or keymap cannot be set.
+pub(crate) fn setup_drawer_buffer(buffer: &mut Buffer) -> anyhow::Result<()> {
+    let options: [(&'static str, Object); 5] = [
+        // Allows users to use `ftplugin` to customize the buffer.
+        ("filetype", Object::from("mail-ui")),
+        // Prevents users from saving the file.
+        ("buftype", Object::from("nofile")),
+        // Line numbers are not relevant in this buffer.
+        ("number", Object::from(false)),
+        ("relativenumber", Object::from(false)),
+        // Prevents users from entering INSERT mode.
+        ("modifiable", Object::from(false)),
+    ];
 
     let opts = OptionOpts::builder().scope(OptionScope::Local).build();
-    if let Err(err) = api::set_option_value("modifiable", true, &opts) {
-        bail!("failed to set option value: {err}");
+
+    for (name, value) in options {
+        if let Err(err) = api::set_option_value(name, value, &opts) {
+            anyhow::bail!("failed to set option value: {err}");
+        }
     }
 
-    // An unbound range on both ends (i.e., `..`) means to replace the whole buffer.
-    if let Err(err) = buffer.set_lines(.., false, replacement) {
-        bail!("failed to update buffer content: {err}");
+    let keymaps: [(Mode, &'static str, &'static str); 9] = [
+        // Toggle the node under the cursor (account/folder) or open the
+        // action's content.
+        (
+            Mode::Normal,
+            "<CR>",
+            ":lua require('mail_nvim').drawer_action()<CR>",
+        ),
+        (
+            Mode::Normal,
+            "o",
+            ":lua require('mail_nvim').drawer_action()<CR>",
+        ),
+        // Refresh the drawer.
+        (Mode::Normal, "R", ":MailUIRefresh<CR>"),
+        // Close the Mail UI drawer.
+        (Mode::Normal, "q", ":bdelete<CR>"),
+        // Show context-sensitive help.
+        (
+            Mode::Normal,
+            "?",
+            ":lua require('mail_nvim').show_help()<CR>",
+        ),
+        // Navigate between siblings.
+        (
+            Mode::Normal,
+            "J",
+            ":lua require('mail_nvim').drawer_goto_sibling(1)<CR>",
+        ),
+        (
+            Mode::Normal,
+            "K",
+            ":lua require('mail_nvim').drawer_goto_sibling(-1)<CR>",
+        ),
+        // Navigate to the first child / the parent node.
+        (
+            Mode::Normal,
+            "<C-n>",
+            ":lua require('mail_nvim').drawer_goto_node(1)<CR>",
+        ),
+        (
+            Mode::Normal,
+            "<C-p>",
+            ":lua require('mail_nvim').drawer_goto_node(-1)<CR>",
+        ),
+    ];
+
+    let opts = SetKeymapOpts::builder().silent(true).build();
+
+    for (mode, keys, command) in keymaps {
+        if let Err(err) = buffer.set_keymap(mode, keys, command, &opts) {
+            anyhow::bail!("failed to set keymap: {err}");
+        }
     }
 
-    if let Err(err) = api::set_option_value("modifiable", false, &opts) {
-        bail!("failed to set option value: {err}");
-    }
+    Ok(())
 }

@@ -29,6 +29,7 @@ impl GetEmail for HimalayaProvider {
                     .without_features()
                     .with_get_messages(BackendFeatureSource::Context)
             },
+            false,
         )
         .await?;
 
@@ -44,7 +45,7 @@ impl GetEmail for HimalayaProvider {
         let messages = backend
             .get_messages(&email_folder_id, &email_id_usizes)
             .await
-            .expect("failed to get emails");
+            .map_err(|err| anyhow::anyhow!("failed to get emails: {err}"))?;
 
         Ok(messages
             .to_vec()

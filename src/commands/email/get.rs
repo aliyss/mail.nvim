@@ -3,8 +3,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use nvim_oxi::libuv::AsyncHandle;
-
 use crate::{
     api::{
         config::{
@@ -13,8 +11,10 @@ use crate::{
         },
         file::TryFile,
     },
-    commands::prelude::*,
-    utils::render::{ASYNC_RUNTIME, ComponentData, get_context, get_data, render},
+    commands::{completion, prelude::*},
+    utils::render::{
+        ASYNC_RUNTIME, ComponentData, get_context, get_data, new_async_handle, render, send_async,
+    },
 };
 
 pub struct EmailGet;
@@ -22,6 +22,17 @@ pub struct EmailGet;
 impl UserCommand for EmailGet {
     const NAME: Name = Name::new("MailEmail");
     const DESCRIPTION: &'static str = "Show the details to an e-mail";
+
+    fn complete(arg_lead: &str, cmd_line: &str, _cursor_pos: usize) -> Vec<String> {
+        // Email ids of the account/folder in the current buffer (or of the
+        // account named on the command line), as fetched so far.
+        let (account, folder) = completion::current_context();
+        let account = completion::account_from(cmd_line).or(account);
+        let Some(account) = account else {
+            return Vec::new();
+        };
+        completion::filter(arg_lead, completion::email_ids(&account, folder.as_deref()))
+    }
 
     fn default_view_component() -> Option<UiViewComponent> {
         Some(UiViewComponent {
@@ -35,16 +46,21 @@ impl UserCommand for EmailGet {
                 context: Vec::new(),
             },
             layout: None,
+            on_enter: None,
+            link: None,
         })
     }
 
     fn callback(_: CommandArgs) {
         let current_buffer = api::get_current_buf();
 
-        let config = Config::read_from_file(None).expect("failed to read config file");
+        let Ok(config) = Config::read_from_file(None) else {
+            bail!("failed to read config file");
+        };
 
-        let mut view_component =
-            Self::default_view_component().expect("expected default view component to be defined");
+        let Some(mut view_component) = Self::default_view_component() else {
+            bail!("expected default view component to be defined");
+        };
 
         let context = match get_context(Some(current_buffer), &view_component) {
             Ok(context) => context,
@@ -58,7 +74,7 @@ impl UserCommand for EmailGet {
         let shared_data = Arc::new(Mutex::<Option<ComponentData>>::new(None));
         let shared_data_for_async = Arc::clone(&shared_data);
 
-        let async_handle = AsyncHandle::new(move || {
+        let Some(async_handle) = new_async_handle(move || {
             let mut lock = shared_data.lock().unwrap();
             if let Some(data) = lock.take() {
                 let component_for_schedule = Arc::clone(&shared_component);
@@ -67,16 +83,14 @@ impl UserCommand for EmailGet {
                     let _ = render(&component_info, data);
                 });
             }
-        })
-        .expect("failed to create async handle");
+        }) else {
+            return;
+        };
 
         ASYNC_RUNTIME.spawn(async move {
             if let Ok(data) = get_data(&view_component, &config).await {
                 *shared_data_for_async.lock().unwrap() = Some(data);
-
-                let () = async_handle
-                    .send()
-                    .expect("failed to send async notification to Neovim");
+                send_async(&async_handle);
             }
         });
     }

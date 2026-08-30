@@ -35,6 +35,8 @@ impl UserCommand for AccountList {
                 context: Vec::new(),
             },
             layout: None,
+            on_enter: None,
+            link: None,
         })
     }
 

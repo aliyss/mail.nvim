@@ -1,3 +1,10 @@
 pub mod buffer;
+pub mod completion;
+pub mod confirm;
+pub mod message;
 pub mod keymaps;
+pub mod loading;
+pub mod popup;
 pub mod render;
+pub mod selection;
+pub mod syntax;

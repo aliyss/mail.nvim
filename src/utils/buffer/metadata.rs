@@ -40,6 +40,8 @@ impl ToBuffer for BufferMetadata {
             UiViewComponentType::Detail => "detail",
             UiViewComponentType::Preview => "preview",
             UiViewComponentType::File => "file",
+            UiViewComponentType::List => "list",
+            UiViewComponentType::Content => "content",
             UiViewComponentType::Other(ref name) => name,
         };
 
@@ -52,7 +54,7 @@ impl ToBuffer for BufferMetadata {
         let file_type = format!("mail-{buffer_type}");
         let component_name = &self.component.name;
         let buffer_name = format!("{component_name}.mail-{group_type}.{buffer_type}");
-        api::set_option_value("filetype", file_type, &opts).expect("failed to set buffer filetype");
+        api::set_option_value("filetype", file_type, &opts)?;
 
         let _ = buffer.set_name(&buffer_name);
 
